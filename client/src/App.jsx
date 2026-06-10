@@ -4,7 +4,7 @@ import PasswordGate from './components/PasswordGate';
 import Navigation from './components/Navigation';
 import Discover from './pages/Discover';
 import Watchlist from './pages/Watchlist';
-import { getStoredPassword } from './utils/password';
+import { getStoredPassword, clearStoredPassword } from './utils/password';
 import { api } from './utils/api';
 
 export default function App() {
@@ -29,6 +29,11 @@ export default function App() {
     if (hasPassword) loadWatchlist();
   }, [hasPassword, loadWatchlist]);
 
+  function handleSignOut() {
+    clearStoredPassword();
+    window.location.reload();
+  }
+
   if (!hasPassword) {
     return <PasswordGate />;
   }
@@ -46,7 +51,7 @@ export default function App() {
         }}
       />
 
-      <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
+      <Navigation activeTab={activeTab} onTabChange={setActiveTab} onSignOut={handleSignOut} />
 
       <main className="max-w-6xl mx-auto px-4 py-6">
         {activeTab === 'discover' ? (

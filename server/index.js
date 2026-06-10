@@ -30,6 +30,10 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api', passwordGate);
 
+app.get('/api/auth/check', (req, res) => {
+  res.json({ ok: true });
+});
+
 app.use('/api/genres', genresRouter);
 app.use('/api/recommendations', recommendationsRouter);
 app.use('/api/watchlist', watchlistRouter);

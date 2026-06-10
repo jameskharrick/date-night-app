@@ -1,20 +1,37 @@
 import { useState } from 'react';
 import { Wine } from 'lucide-react';
 import { storePassword } from '../utils/password';
+import { checkPassword } from '../utils/api';
 
 export default function PasswordGate() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!password.trim()) {
       setError('Please enter a password');
       return;
     }
 
-    storePassword(password.trim());
-    window.location.reload();
+    setSubmitting(true);
+    setError('');
+
+    try {
+      const valid = await checkPassword(password.trim());
+      if (!valid) {
+        setError('Incorrect password');
+        setSubmitting(false);
+        return;
+      }
+
+      storePassword(password.trim());
+      window.location.reload();
+    } catch (err) {
+      setError('Something went wrong. Please try again.');
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -44,9 +61,10 @@ export default function PasswordGate() {
 
           <button
             type="submit"
+            disabled={submitting}
             className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-60 disabled:cursor-not-allowed text-slate-950 font-semibold rounded-lg px-4 py-2.5 transition"
           >
-            Unlock
+            {submitting ? 'Checking...' : 'Unlock'}
           </button>
         </form>
       </div>

@@ -22,6 +22,13 @@ async function request(path, options = {}) {
   return res.json();
 }
 
+export async function checkPassword(password) {
+  const res = await fetch(`${API_URL}/api/auth/check`, {
+    headers: { 'X-App-Password': password },
+  });
+  return res.ok;
+}
+
 export const api = {
   getGenres: () => request('/api/genres'),
 

@@ -7,3 +7,7 @@ export function getStoredPassword() {
 export function storePassword(password) {
   localStorage.setItem(PASSWORD_STORAGE_KEY, password);
 }
+
+export function clearStoredPassword() {
+  localStorage.removeItem(PASSWORD_STORAGE_KEY);
+}
