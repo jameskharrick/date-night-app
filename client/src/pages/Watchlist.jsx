@@ -5,16 +5,29 @@ import StatsPanel from '../components/StatsPanel';
 import Spinner from '../components/Spinner';
 import { api } from '../utils/api';
 import { seenKey } from '../utils/seen';
+import { STATUS_OPTIONS } from '../utils/constants';
+
+const SEEN_FILTER_OPTIONS = [
+  { value: 'any', label: 'Any' },
+  { value: 'seen', label: 'Seen' },
+  { value: 'unseen', label: 'Unseen' },
+];
 
 export default function Watchlist({ watchlist, loading, onChange, seenStatus, onToggleSeen }) {
-  const [hideSeenJames, setHideSeenJames] = useState(false);
-  const [hideSeenGurleen, setHideSeenGurleen] = useState(false);
+  const [seenFilterJames, setSeenFilterJames] = useState('any');
+  const [seenFilterGurleen, setSeenFilterGurleen] = useState('any');
+  const [activeStatus, setActiveStatus] = useState(STATUS_OPTIONS[0].value);
 
   const visibleWatchlist = watchlist.filter((item) => {
     const seen = seenStatus[seenKey(item)];
-    if (!seen) return true;
-    if (hideSeenJames && seen.seen_james) return false;
-    if (hideSeenGurleen && seen.seen_gurleen) return false;
+    const seenJames = Boolean(seen?.seen_james);
+    const seenGurleen = Boolean(seen?.seen_gurleen);
+
+    if (seenFilterJames === 'seen' && !seenJames) return false;
+    if (seenFilterJames === 'unseen' && seenJames) return false;
+    if (seenFilterGurleen === 'seen' && !seenGurleen) return false;
+    if (seenFilterGurleen === 'unseen' && seenGurleen) return false;
+
     return true;
   });
 
@@ -46,25 +59,34 @@ export default function Watchlist({ watchlist, loading, onChange, seenStatus, on
         <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
           <h2 className="text-lg font-semibold text-slate-200">Your Watchlist</h2>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-400">Hide seen by:</span>
-            <label className="flex items-center gap-1.5 text-xs font-medium text-slate-300 bg-slate-800 border border-slate-700 rounded-full px-2.5 py-1 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={hideSeenJames}
-                onChange={(e) => setHideSeenJames(e.target.checked)}
-                className="rounded border-slate-600 bg-slate-900 text-amber-500 focus:ring-amber-400 focus:ring-offset-0"
-              />
-              James
+          <div className="flex items-center gap-3 flex-wrap">
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-400">
+              Seen by James:
+              <select
+                value={seenFilterJames}
+                onChange={(e) => setSeenFilterJames(e.target.value)}
+                className="bg-slate-800 border border-slate-700 rounded-full px-2.5 py-1 text-xs font-medium text-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              >
+                {SEEN_FILTER_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
             </label>
-            <label className="flex items-center gap-1.5 text-xs font-medium text-slate-300 bg-slate-800 border border-slate-700 rounded-full px-2.5 py-1 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={hideSeenGurleen}
-                onChange={(e) => setHideSeenGurleen(e.target.checked)}
-                className="rounded border-slate-600 bg-slate-900 text-amber-500 focus:ring-amber-400 focus:ring-offset-0"
-              />
-              Gurleen
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-400">
+              Seen by Gurleen:
+              <select
+                value={seenFilterGurleen}
+                onChange={(e) => setSeenFilterGurleen(e.target.value)}
+                className="bg-slate-800 border border-slate-700 rounded-full px-2.5 py-1 text-xs font-medium text-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              >
+                {SEEN_FILTER_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
         </div>
@@ -74,23 +96,56 @@ export default function Watchlist({ watchlist, loading, onChange, seenStatus, on
             <p className="text-lg">Your watchlist is empty.</p>
             <p className="text-sm mt-1">Head to Discover to find something to watch together.</p>
           </div>
-        ) : visibleWatchlist.length === 0 ? (
-          <div className="text-center text-slate-400 py-20 bg-slate-800 border border-slate-700 rounded-xl">
-            <p className="text-lg">Nothing to show with these filters.</p>
-          </div>
         ) : (
-          <div className="space-y-3">
-            {visibleWatchlist.map((item) => (
-              <WatchlistItem
-                key={item.id}
-                item={item}
-                onUpdate={handleUpdate}
-                onRemove={handleRemove}
-                seen={seenStatus[seenKey(item)]}
-                onToggleSeen={onToggleSeen}
-              />
-            ))}
-          </div>
+          <>
+            <div className="flex gap-2 bg-slate-900 rounded-lg p-1 mb-4 overflow-x-auto">
+              {STATUS_OPTIONS.map((opt) => {
+                const count = visibleWatchlist.filter((item) => item.status === opt.value).length;
+                const active = activeStatus === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => setActiveStatus(opt.value)}
+                    className={`px-4 py-1.5 rounded-md text-sm font-medium transition whitespace-nowrap ${
+                      active
+                        ? 'bg-amber-500 text-slate-950'
+                        : 'text-slate-300 hover:text-slate-100 hover:bg-slate-700'
+                    }`}
+                  >
+                    {opt.label}{' '}
+                    <span className={active ? 'text-slate-800' : 'text-slate-500'}>({count})</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {(() => {
+              const activeItems = visibleWatchlist.filter((item) => item.status === activeStatus);
+
+              if (activeItems.length === 0) {
+                return (
+                  <div className="text-center text-slate-400 py-20 bg-slate-800 border border-slate-700 rounded-xl">
+                    <p className="text-lg">Nothing to show with these filters.</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-3">
+                  {activeItems.map((item) => (
+                    <WatchlistItem
+                      key={item.id}
+                      item={item}
+                      onUpdate={handleUpdate}
+                      onRemove={handleRemove}
+                      seen={seenStatus[seenKey(item)]}
+                      onToggleSeen={onToggleSeen}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
+          </>
         )}
       </section>
 
