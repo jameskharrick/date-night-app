@@ -170,7 +170,7 @@ export default function FilterPanel({ filters, onChange, onSubmit, genreOptions,
         disabled={loading}
         className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-60 disabled:cursor-not-allowed text-slate-950 font-semibold rounded-lg px-4 py-2.5 transition"
       >
-        {loading ? 'Searching...' : 'Find movies'}
+        {loading ? 'Searching...' : 'Find something to watch'}
       </button>
     </div>
   );

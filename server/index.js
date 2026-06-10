@@ -6,6 +6,7 @@ const cors = require('cors');
 const passwordGate = require('./middleware/password');
 const genresRouter = require('./routes/genres');
 const recommendationsRouter = require('./routes/recommendations');
+const searchRouter = require('./routes/search');
 const watchlistRouter = require('./routes/watchlist');
 
 const app = express();
@@ -36,6 +37,7 @@ app.get('/api/auth/check', (req, res) => {
 
 app.use('/api/genres', genresRouter);
 app.use('/api/recommendations', recommendationsRouter);
+app.use('/api/search', searchRouter);
 app.use('/api/watchlist', watchlistRouter);
 
 app.listen(PORT, () => {

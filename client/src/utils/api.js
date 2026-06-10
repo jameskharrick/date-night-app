@@ -39,6 +39,13 @@ export const api = {
     return request(`/api/recommendations?${query.toString()}`);
   },
 
+  search: (params) => {
+    const query = new URLSearchParams(
+      Object.entries(params).filter(([, value]) => value !== undefined && value !== '')
+    );
+    return request(`/api/search?${query.toString()}`);
+  },
+
   getWatchlist: () => request('/api/watchlist'),
 
   addToWatchlist: (item) =>

@@ -1,7 +1,7 @@
 const express = require('express');
 const tmdb = require('../tmdb');
-const { MOVIE_GENRES, TV_GENRES } = require('../genreMap');
-const { PLATFORM_NAME_MAP, SUPPORTED_PLATFORMS } = require('../platformMap');
+const { toCardItem } = require('../tmdbItems');
+const { SUPPORTED_PLATFORMS } = require('../platformMap');
 
 const router = express.Router();
 
@@ -52,31 +52,6 @@ async function discover(mediaType, { genres, minScore, yearFrom, yearTo, surpris
   return results.map((item) => ({ ...item, _mediaType: mediaType }));
 }
 
-async function getWatchProviders(mediaType, id) {
-  try {
-    const { data } = await tmdb.get(`/${mediaType}/${id}/watch/providers`);
-    const us = data.results?.US;
-    if (!us) return [];
-
-    const providers = [
-      ...(us.flatrate || []),
-      ...(us.ads || []),
-      ...(us.free || []),
-    ];
-
-    const names = new Set();
-    for (const provider of providers) {
-      const canonical = PLATFORM_NAME_MAP[provider.provider_name];
-      if (canonical) names.add(canonical);
-    }
-
-    return [...names];
-  } catch (err) {
-    console.error(`Failed to fetch watch providers for ${mediaType}/${id}:`, err.message);
-    return [];
-  }
-}
-
 router.get('/', async (req, res) => {
   try {
     const {
@@ -111,27 +86,7 @@ router.get('/', async (req, res) => {
       await Promise.all(mediaTypes.map((mt) => discover(mt, filterOptions)))
     ).flat();
 
-    const withProviders = await Promise.all(
-      discoverResults.map(async (item) => {
-        const platformsForItem = await getWatchProviders(item._mediaType, item.id);
-        const genreMap = item._mediaType === 'movie' ? MOVIE_GENRES : TV_GENRES;
-        const genreNames = (item.genre_ids || [])
-          .map((gid) => genreMap[gid])
-          .filter(Boolean);
-        const releaseDate = item._mediaType === 'movie' ? item.release_date : item.first_air_date;
-
-        return {
-          tmdb_id: item.id,
-          type: item._mediaType,
-          title: item._mediaType === 'movie' ? item.title : item.name,
-          poster_path: item.poster_path || null,
-          genres: genreNames,
-          platforms: platformsForItem,
-          tmdb_score: item.vote_average,
-          year: releaseDate ? Number(releaseDate.slice(0, 4)) : null,
-        };
-      })
-    );
+    const withProviders = await Promise.all(discoverResults.map(toCardItem));
 
     let filtered = withProviders;
 
