@@ -1,30 +1,20 @@
 import { useState } from 'react';
 import { Wine } from 'lucide-react';
-import { hashPassphrase, storePassphraseHash } from '../utils/passphrase';
+import { storePassword } from '../utils/password';
 
-export default function PassphraseGate() {
-  const [passphrase, setPassphrase] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+export default function PasswordGate() {
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  async function handleSubmit(e) {
+  function handleSubmit(e) {
     e.preventDefault();
-    if (!passphrase.trim()) {
-      setError('Please enter a passphrase');
+    if (!password.trim()) {
+      setError('Please enter a password');
       return;
     }
 
-    setSubmitting(true);
-    setError('');
-
-    try {
-      const hash = await hashPassphrase(passphrase.trim());
-      storePassphraseHash(hash);
-      window.location.reload();
-    } catch (err) {
-      setError('Something went wrong. Please try again.');
-      setSubmitting(false);
-    }
+    storePassword(password.trim());
+    window.location.reload();
   }
 
   return (
@@ -36,16 +26,16 @@ export default function PassphraseGate() {
           </div>
           <h1 className="text-2xl font-bold text-slate-100">James &amp; Gurleen Date Night</h1>
           <p className="text-slate-400 text-sm mt-1 text-center">
-            Enter your shared passphrase to continue
+            Enter your shared password to continue
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="password"
-            value={passphrase}
-            onChange={(e) => setPassphrase(e.target.value)}
-            placeholder="Passphrase"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
             autoFocus
             className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition"
           />
@@ -54,10 +44,9 @@ export default function PassphraseGate() {
 
           <button
             type="submit"
-            disabled={submitting}
             className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-60 disabled:cursor-not-allowed text-slate-950 font-semibold rounded-lg px-4 py-2.5 transition"
           >
-            {submitting ? 'Unlocking...' : 'Unlock'}
+            Unlock
           </button>
         </form>
       </div>

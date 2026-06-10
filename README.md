@@ -78,22 +78,14 @@ Copy `server/.env.example` to `server/.env` and fill in your values:
 TMDB_API_KEY=your_tmdb_key_here
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_SERVICE_KEY=your_supabase_service_role_key
-PASSPHRASE_HASH=
+APP_PASSWORD=
 PORT=3001
 ```
 
-#### Generate a passphrase hash
+#### Set a shared password
 
-The app is gated behind a shared passphrase. Pick a passphrase, then run the helper script to generate
-its SHA-256 hash:
-
-```bash
-cd server
-npm install
-node scripts/hash-passphrase.js "your-shared-passphrase"
-```
-
-Copy the printed hash into `PASSPHRASE_HASH` in `server/.env`. If you leave `PASSPHRASE_HASH` blank, the
+The app is gated behind a shared password. Set `APP_PASSWORD` in `server/.env` to whatever password you
+want — it's compared directly against what's typed on the site. If you leave `APP_PASSWORD` blank, the
 server runs in **dev mode** and accepts all requests (it will print a warning on startup).
 
 ### Client (`/client/.env`)
@@ -116,7 +108,7 @@ npm run dev           # runs the server and client together
 - Backend runs at `http://localhost:3001`
 - Frontend runs at `http://localhost:5173`
 
-On first visit, you'll be asked for the shared passphrase (the one you hashed in step 5).
+On first visit, you'll be asked for the shared password (the one set in step 5).
 
 ## 7. Deployment
 
@@ -125,7 +117,7 @@ On first visit, you'll be asked for the shared passphrase (the one you hashed in
 1. Create a new Railway project and link it to your repo (or deploy via the Railway CLI), pointing the
    service at the `/server` directory.
 2. Set the environment variables from `server/.env` (`TMDB_API_KEY`, `SUPABASE_URL`,
-   `SUPABASE_SERVICE_KEY`, `PASSPHRASE_HASH`, `PORT`) in the Railway dashboard.
+   `SUPABASE_SERVICE_KEY`, `APP_PASSWORD`, `PORT`) in the Railway dashboard.
 3. Railway will detect `server/railway.json`, build with Nixpacks, and start the app with
    `node index.js`. The healthcheck hits `GET /api/health`.
 4. Once deployed, copy the public Railway URL (e.g. `https://your-app.up.railway.app`).
@@ -149,6 +141,5 @@ your deployed Vercel frontend will work without additional CORS configuration.
 /client          → React + Vite app
 /server          → Express API
 /server/db.js    → Supabase client setup
-/server/scripts/ → helper scripts (hash-passphrase.js)
 package.json     → root package with concurrently dev script
 ```

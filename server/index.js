@@ -3,7 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
-const passphraseGate = require('./middleware/passphrase');
+const passwordGate = require('./middleware/password');
 const genresRouter = require('./routes/genres');
 const recommendationsRouter = require('./routes/recommendations');
 const watchlistRouter = require('./routes/watchlist');
@@ -23,12 +23,12 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Health check (no passphrase required)
+// Health check (no password required)
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.use('/api', passphraseGate);
+app.use('/api', passwordGate);
 
 app.use('/api/genres', genresRouter);
 app.use('/api/recommendations', recommendationsRouter);

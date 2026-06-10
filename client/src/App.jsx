@@ -1,14 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Toaster } from 'react-hot-toast';
-import PassphraseGate from './components/PassphraseGate';
+import PasswordGate from './components/PasswordGate';
 import Navigation from './components/Navigation';
 import Discover from './pages/Discover';
 import Watchlist from './pages/Watchlist';
-import { getStoredPassphraseHash } from './utils/passphrase';
+import { getStoredPassword } from './utils/password';
 import { api } from './utils/api';
 
 export default function App() {
-  const [hasPassphrase] = useState(() => Boolean(getStoredPassphraseHash()));
+  const [hasPassword] = useState(() => Boolean(getStoredPassword()));
   const [activeTab, setActiveTab] = useState('discover');
   const [watchlist, setWatchlist] = useState([]);
   const [watchlistLoading, setWatchlistLoading] = useState(true);
@@ -26,11 +26,11 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (hasPassphrase) loadWatchlist();
-  }, [hasPassphrase, loadWatchlist]);
+    if (hasPassword) loadWatchlist();
+  }, [hasPassword, loadWatchlist]);
 
-  if (!hasPassphrase) {
-    return <PassphraseGate />;
+  if (!hasPassword) {
+    return <PasswordGate />;
   }
 
   return (

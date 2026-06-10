@@ -1,4 +1,4 @@
-import { getStoredPassphraseHash } from './passphrase';
+import { getStoredPassword } from './password';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -8,8 +8,8 @@ async function request(path, options = {}) {
     ...options.headers,
   };
 
-  const hash = getStoredPassphraseHash();
-  if (hash) headers['X-Passphrase-Hash'] = hash;
+  const password = getStoredPassword();
+  if (password) headers['X-App-Password'] = password;
 
   const res = await fetch(`${API_URL}${path}`, { ...options, headers });
 
