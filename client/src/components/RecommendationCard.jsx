@@ -4,7 +4,7 @@ import GenreTag from './GenreTag';
 
 const POSTER_BASE = 'https://image.tmdb.org/t/p/w300';
 
-export default function RecommendationCard({ item, onAdd, onNotInterested, isAdded }) {
+export default function RecommendationCard({ item, onAdd, onNotInterested, isAdded, seen, onToggleSeen }) {
   const tmdbUrl = `https://www.themoviedb.org/${item.type}/${item.tmdb_id}`;
 
   return (
@@ -54,6 +54,30 @@ export default function RecommendationCard({ item, onAdd, onNotInterested, isAdd
         )}
 
         <div className="mt-auto pt-2 flex flex-col gap-1.5">
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              onClick={() => onToggleSeen(item, 'james')}
+              className={`flex items-center justify-center gap-1 text-xs font-semibold px-2 py-1.5 rounded-lg border transition ${
+                seen?.seen_james
+                  ? 'bg-amber-500 text-slate-950 border-amber-500'
+                  : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-500'
+              }`}
+            >
+              {seen?.seen_james && <Check className="w-3.5 h-3.5" />} James
+            </button>
+
+            <button
+              onClick={() => onToggleSeen(item, 'gurleen')}
+              className={`flex items-center justify-center gap-1 text-xs font-semibold px-2 py-1.5 rounded-lg border transition ${
+                seen?.seen_gurleen
+                  ? 'bg-amber-500 text-slate-950 border-amber-500'
+                  : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-500'
+              }`}
+            >
+              {seen?.seen_gurleen && <Check className="w-3.5 h-3.5" />} Gurleen
+            </button>
+          </div>
+
           <button
             onClick={() => onAdd(item)}
             disabled={isAdded}

@@ -54,6 +54,16 @@ create table genre_cache (
   type text not null,
   fetched_at timestamptz not null default now()
 );
+
+create table seen_status (
+  id uuid primary key default gen_random_uuid(),
+  tmdb_id int not null,
+  type text not null,
+  seen_james boolean not null default false,
+  seen_gurleen boolean not null default false,
+  updated_at timestamptz not null default now(),
+  unique (tmdb_id, type)
+);
 ```
 
 3. From **Project Settings → API**, copy:

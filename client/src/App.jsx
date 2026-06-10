@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Toaster } from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 import PasswordGate from './components/PasswordGate';
 import Navigation from './components/Navigation';
 import Discover from './pages/Discover';
 import Watchlist from './pages/Watchlist';
 import { getStoredPassword, clearStoredPassword } from './utils/password';
+import { seenKey } from './utils/seen';
 import { api } from './utils/api';
 
 export default function App() {
@@ -12,6 +13,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('discover');
   const [watchlist, setWatchlist] = useState([]);
   const [watchlistLoading, setWatchlistLoading] = useState(true);
+  const [seenStatus, setSeenStatus] = useState({});
 
   const loadWatchlist = useCallback(async () => {
     setWatchlistLoading(true);
@@ -25,9 +27,39 @@ export default function App() {
     }
   }, []);
 
+  const loadSeenStatus = useCallback(async () => {
+    try {
+      const data = await api.getSeenStatus();
+      const map = {};
+      for (const row of data) {
+        map[seenKey(row)] = { seen_james: row.seen_james, seen_gurleen: row.seen_gurleen };
+      }
+      setSeenStatus(map);
+    } catch (err) {
+      console.error('Failed to load seen status:', err.message);
+    }
+  }, []);
+
   useEffect(() => {
-    if (hasPassword) loadWatchlist();
-  }, [hasPassword, loadWatchlist]);
+    if (hasPassword) {
+      loadWatchlist();
+      loadSeenStatus();
+    }
+  }, [hasPassword, loadWatchlist, loadSeenStatus]);
+
+  async function handleToggleSeen(item, person) {
+    try {
+      const updated = await api.toggleSeen(item.tmdb_id, item.type, person);
+      setSeenStatus((prev) => ({
+        ...prev,
+        [seenKey(updated)]: { seen_james: updated.seen_james, seen_gurleen: updated.seen_gurleen },
+      }));
+      return updated;
+    } catch (err) {
+      toast.error(`Failed to update seen status: ${err.message}`);
+      return null;
+    }
+  }
 
   function handleSignOut() {
     clearStoredPassword();
@@ -55,9 +87,20 @@ export default function App() {
 
       <main className="max-w-6xl mx-auto px-4 py-6">
         {activeTab === 'discover' ? (
-          <Discover watchlist={watchlist} onWatchlistChange={loadWatchlist} />
+          <Discover
+            watchlist={watchlist}
+            onWatchlistChange={loadWatchlist}
+            seenStatus={seenStatus}
+            onToggleSeen={handleToggleSeen}
+          />
         ) : (
-          <Watchlist watchlist={watchlist} loading={watchlistLoading} onChange={loadWatchlist} />
+          <Watchlist
+            watchlist={watchlist}
+            loading={watchlistLoading}
+            onChange={loadWatchlist}
+            seenStatus={seenStatus}
+            onToggleSeen={handleToggleSeen}
+          />
         )}
       </main>
     </div>

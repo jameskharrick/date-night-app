@@ -46,6 +46,14 @@ export const api = {
     return request(`/api/search?${query.toString()}`);
   },
 
+  getSeenStatus: () => request('/api/seen'),
+
+  toggleSeen: (tmdb_id, type, person) =>
+    request('/api/seen/toggle', {
+      method: 'POST',
+      body: JSON.stringify({ tmdb_id, type, person }),
+    }),
+
   getWatchlist: () => request('/api/watchlist'),
 
   addToWatchlist: (item) =>

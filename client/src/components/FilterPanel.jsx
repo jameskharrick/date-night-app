@@ -146,6 +146,29 @@ export default function FilterPanel({ filters, onChange, onSubmit, genreOptions,
         </div>
       </div>
 
+      {/* Hide already seen */}
+      <div className="space-y-1.5">
+        <h3 className="text-sm font-semibold text-slate-300 mb-2">Hide Already Seen</h3>
+        <label className="flex items-center justify-between bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 cursor-pointer">
+          <span className="text-sm text-slate-300">Seen by James</span>
+          <input
+            type="checkbox"
+            checked={filters.hideSeenJames}
+            onChange={(e) => update({ hideSeenJames: e.target.checked })}
+            className="rounded border-slate-600 bg-slate-900 text-amber-500 focus:ring-amber-400 focus:ring-offset-0"
+          />
+        </label>
+        <label className="flex items-center justify-between bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 cursor-pointer">
+          <span className="text-sm text-slate-300">Seen by Gurleen</span>
+          <input
+            type="checkbox"
+            checked={filters.hideSeenGurleen}
+            onChange={(e) => update({ hideSeenGurleen: e.target.checked })}
+            className="rounded border-slate-600 bg-slate-900 text-amber-500 focus:ring-amber-400 focus:ring-offset-0"
+          />
+        </label>
+      </div>
+
       {/* Surprise me */}
       <div className="flex items-center justify-between bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5">
         <span className="text-sm font-medium text-slate-300">Surprise me</span>

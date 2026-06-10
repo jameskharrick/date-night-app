@@ -7,6 +7,7 @@ import SearchBar from '../components/SearchBar';
 import Spinner from '../components/Spinner';
 import { api } from '../utils/api';
 import { pickRandomSubset } from '../utils/shuffle';
+import { seenKey } from '../utils/seen';
 import { CURRENT_YEAR, DEFAULT_YEAR_FROM } from '../utils/constants';
 
 const DEFAULT_FILTERS = {
@@ -17,9 +18,11 @@ const DEFAULT_FILTERS = {
   yearFrom: DEFAULT_YEAR_FROM,
   yearTo: CURRENT_YEAR,
   surpriseMe: false,
+  hideSeenJames: false,
+  hideSeenGurleen: false,
 };
 
-export default function Discover({ watchlist, onWatchlistChange }) {
+export default function Discover({ watchlist, onWatchlistChange, seenStatus, onToggleSeen }) {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [genreOptions, setGenreOptions] = useState({ movie: [], tv: [] });
   const [pool, setPool] = useState([]);
@@ -39,6 +42,14 @@ export default function Discover({ watchlist, onWatchlistChange }) {
       .catch((err) => toast.error(`Failed to load genres: ${err.message}`));
   }, []);
 
+  function isHiddenBySeenFilters(item) {
+    const seen = seenStatus[seenKey(item)];
+    if (!seen) return false;
+    if (filters.hideSeenJames && seen.seen_james) return true;
+    if (filters.hideSeenGurleen && seen.seen_gurleen) return true;
+    return false;
+  }
+
   async function handleFindMovies() {
     setLoading(true);
     try {
@@ -56,11 +67,12 @@ export default function Discover({ watchlist, onWatchlistChange }) {
       }
 
       const results = await api.getRecommendations(params);
-      setPool(results);
-      setDisplayed(pickRandomSubset(results));
+      const filtered = results.filter((item) => !isHiddenBySeenFilters(item));
+      setPool(filtered);
+      setDisplayed(pickRandomSubset(filtered));
       setHasSearched(true);
 
-      if (results.length === 0) {
+      if (filtered.length === 0) {
         toast('No matches found. Try adjusting your filters.', { icon: '🔍' });
       }
     } catch (err) {
@@ -82,10 +94,11 @@ export default function Discover({ watchlist, onWatchlistChange }) {
     setSearchLoading(true);
     try {
       const results = await api.search({ query: trimmed, type: filters.type });
-      setSearchResults(results);
+      const filtered = results.filter((item) => !isHiddenBySeenFilters(item));
+      setSearchResults(filtered);
       setSubmittedQuery(trimmed);
 
-      if (results.length === 0) {
+      if (filtered.length === 0) {
         toast('No matches found.', { icon: '🔍' });
       }
     } catch (err) {
@@ -106,6 +119,22 @@ export default function Discover({ watchlist, onWatchlistChange }) {
     setPool((prev) => prev.filter((p) => !matches(p)));
     setDisplayed((prev) => prev.filter((p) => !matches(p)));
     setSearchResults((prev) => (prev ? prev.filter((p) => !matches(p)) : prev));
+  }
+
+  async function handleToggleSeen(item, person) {
+    const updated = await onToggleSeen(item, person);
+    if (!updated) return;
+
+    const shouldHide =
+      (filters.hideSeenJames && updated.seen_james) ||
+      (filters.hideSeenGurleen && updated.seen_gurleen);
+
+    if (shouldHide) {
+      const matches = (p) => p.tmdb_id === item.tmdb_id && p.type === item.type;
+      setPool((prev) => prev.filter((p) => !matches(p)));
+      setDisplayed((prev) => prev.filter((p) => !matches(p)));
+      setSearchResults((prev) => (prev ? prev.filter((p) => !matches(p)) : prev));
+    }
   }
 
   async function handleAdd(item) {
@@ -174,6 +203,8 @@ export default function Discover({ watchlist, onWatchlistChange }) {
                     onAdd={handleAdd}
                     onNotInterested={handleNotInterested}
                     isAdded={isAdded(item)}
+                    seen={seenStatus[seenKey(item)]}
+                    onToggleSeen={handleToggleSeen}
                   />
                 ))}
               </div>
@@ -217,6 +248,8 @@ export default function Discover({ watchlist, onWatchlistChange }) {
                       onAdd={handleAdd}
                       onNotInterested={handleNotInterested}
                       isAdded={isAdded(item)}
+                      seen={seenStatus[seenKey(item)]}
+                      onToggleSeen={handleToggleSeen}
                     />
                   ))}
                 </div>

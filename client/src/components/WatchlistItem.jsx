@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trash2, Star } from 'lucide-react';
+import { Trash2, Star, Check } from 'lucide-react';
 import PlatformBadge from './PlatformBadge';
 import { STATUS_OPTIONS } from '../utils/constants';
 
@@ -16,7 +16,7 @@ function safeParse(value) {
   }
 }
 
-export default function WatchlistItem({ item, onUpdate, onRemove }) {
+export default function WatchlistItem({ item, onUpdate, onRemove, seen, onToggleSeen }) {
   const platforms = safeParse(item.platforms);
   const [note, setNote] = useState(item.note || '');
 
@@ -82,6 +82,30 @@ export default function WatchlistItem({ item, onUpdate, onRemove }) {
             ))}
           </div>
         )}
+
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-semibold text-slate-400 mr-0.5">Seen by:</span>
+          <button
+            onClick={() => onToggleSeen(item, 'james')}
+            className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border transition ${
+              seen?.seen_james
+                ? 'bg-amber-500 text-slate-950 border-amber-500'
+                : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-500'
+            }`}
+          >
+            {seen?.seen_james && <Check className="w-3 h-3" />} James
+          </button>
+          <button
+            onClick={() => onToggleSeen(item, 'gurleen')}
+            className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border transition ${
+              seen?.seen_gurleen
+                ? 'bg-amber-500 text-slate-950 border-amber-500'
+                : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-500'
+            }`}
+          >
+            {seen?.seen_gurleen && <Check className="w-3 h-3" />} Gurleen
+          </button>
+        </div>
 
         <div className="flex flex-wrap gap-1.5">
           {STATUS_OPTIONS.map((opt) => (
