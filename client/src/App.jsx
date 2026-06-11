@@ -4,6 +4,7 @@ import PasswordGate from './components/PasswordGate';
 import Navigation from './components/Navigation';
 import Discover from './pages/Discover';
 import Watchlist from './pages/Watchlist';
+import Travel from './pages/Travel';
 import { getStoredPassword, clearStoredPassword } from './utils/password';
 import { seenKey } from './utils/seen';
 import { api } from './utils/api';
@@ -13,6 +14,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('discover');
   const [watchlist, setWatchlist] = useState([]);
   const [watchlistLoading, setWatchlistLoading] = useState(true);
+  const [trips, setTrips] = useState([]);
+  const [tripsLoading, setTripsLoading] = useState(true);
   const [seenStatus, setSeenStatus] = useState({});
 
   const loadWatchlist = useCallback(async () => {
@@ -24,6 +27,18 @@ export default function App() {
       console.error('Failed to load watchlist:', err.message);
     } finally {
       setWatchlistLoading(false);
+    }
+  }, []);
+
+  const loadTrips = useCallback(async () => {
+    setTripsLoading(true);
+    try {
+      const data = await api.getTrips();
+      setTrips(data);
+    } catch (err) {
+      console.error('Failed to load trips:', err.message);
+    } finally {
+      setTripsLoading(false);
     }
   }, []);
 
@@ -43,9 +58,10 @@ export default function App() {
   useEffect(() => {
     if (hasPassword) {
       loadWatchlist();
+      loadTrips();
       loadSeenStatus();
     }
-  }, [hasPassword, loadWatchlist, loadSeenStatus]);
+  }, [hasPassword, loadWatchlist, loadTrips, loadSeenStatus]);
 
   async function handleToggleSeen(item, person) {
     try {
@@ -93,7 +109,7 @@ export default function App() {
             seenStatus={seenStatus}
             onToggleSeen={handleToggleSeen}
           />
-        ) : (
+        ) : activeTab === 'watchlist' ? (
           <Watchlist
             watchlist={watchlist}
             loading={watchlistLoading}
@@ -101,6 +117,8 @@ export default function App() {
             seenStatus={seenStatus}
             onToggleSeen={handleToggleSeen}
           />
+        ) : (
+          <Travel trips={trips} loading={tripsLoading} onChange={loadTrips} />
         )}
       </main>
     </div>

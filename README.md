@@ -1,8 +1,9 @@
 # James & Gurleen Date Night
 
-A full-stack web app for picking movies and TV shows to watch together. Filter by genre, streaming
-platform, score, and release year, get a shuffled set of recommendations from TMDB, and keep a shared
-watchlist with statuses, scores, and notes.
+A full-stack web app for planning date nights together. Filter by genre, streaming platform, score, and
+release year, get a shuffled set of recommendations from TMDB, and keep a shared watchlist with statuses,
+scores, and notes. Also log past trips and plan future ones, with ratings, notes, booking links, and
+photo/video memories.
 
 ## Stack
 
@@ -64,6 +65,42 @@ create table seen_status (
   updated_at timestamptz not null default now(),
   unique (tmdb_id, type)
 );
+
+create table trips (
+  id uuid primary key default gen_random_uuid(),
+  city text not null,
+  region text,
+  country text,
+  status text not null default 'want_to_visit',
+  start_date date,
+  end_date date,
+  rating int,
+  notes text,
+  added_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table trip_links (
+  id uuid primary key default gen_random_uuid(),
+  trip_id uuid not null references trips(id) on delete cascade,
+  category text not null,
+  label text not null,
+  url text not null,
+  created_at timestamptz not null default now()
+);
+
+create table trip_media (
+  id uuid primary key default gen_random_uuid(),
+  trip_id uuid not null references trips(id) on delete cascade,
+  media_type text not null,
+  secure_url text not null,
+  public_id text not null,
+  caption text,
+  created_at timestamptz not null default now()
+);
+
+create index trip_links_trip_id_idx on trip_links(trip_id);
+create index trip_media_trip_id_idx on trip_media(trip_id);
 ```
 
 3. From **Project Settings → API**, copy:
@@ -71,14 +108,22 @@ create table seen_status (
    - The **`service_role` secret key** → `SUPABASE_SERVICE_KEY` (keep this secret — it's only used
      server-side)
 
-## 4. Create Railway and Vercel accounts
+## 4. Create a Cloudinary account
+
+Trip photos and videos are stored in [Cloudinary](https://cloudinary.com/).
+
+1. Sign up for a free account at [cloudinary.com](https://cloudinary.com/).
+2. From your Cloudinary dashboard, copy the **Cloud Name**, **API Key**, and **API Secret** — you'll need
+   them for `server/.env`.
+
+## 5. Create Railway and Vercel accounts
 
 You'll need these later for deployment:
 
 - [Railway](https://railway.app/) — hosts the Express backend
 - [Vercel](https://vercel.com/) — hosts the React frontend
 
-## 5. Configure environment variables
+## 6. Configure environment variables
 
 ### Server (`/server/.env`)
 
@@ -88,6 +133,9 @@ Copy `server/.env.example` to `server/.env` and fill in your values:
 TMDB_API_KEY=your_tmdb_key_here
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_SERVICE_KEY=your_supabase_service_role_key
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 APP_PASSWORD=
 PORT=3001
 ```
@@ -106,7 +154,7 @@ VITE_API_URL=http://localhost:3001
 
 This is already set up for local development.
 
-## 6. Install and run
+## 7. Install and run
 
 From the project root:
 
@@ -120,14 +168,15 @@ npm run dev           # runs the server and client together
 
 On first visit, you'll be asked for the shared password (the one set in step 5).
 
-## 7. Deployment
+## 8. Deployment
 
 ### Backend → Railway
 
 1. Create a new Railway project and link it to your repo (or deploy via the Railway CLI), pointing the
    service at the `/server` directory.
 2. Set the environment variables from `server/.env` (`TMDB_API_KEY`, `SUPABASE_URL`,
-   `SUPABASE_SERVICE_KEY`, `APP_PASSWORD`, `PORT`) in the Railway dashboard.
+   `SUPABASE_SERVICE_KEY`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`,
+   `APP_PASSWORD`, `PORT`) in the Railway dashboard.
 3. Railway will detect `server/railway.json`, build with Nixpacks, and start the app with
    `node index.js`. The healthcheck hits `GET /api/health`.
 4. Once deployed, copy the public Railway URL (e.g. `https://your-app.up.railway.app`).

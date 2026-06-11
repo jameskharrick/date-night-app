@@ -34,3 +34,28 @@ export const CONTENT_TYPES = [
 
 export const CURRENT_YEAR = new Date().getFullYear();
 export const DEFAULT_YEAR_FROM = 2000;
+
+export const TRIP_STATUS_OPTIONS = [
+  { value: 'want_to_visit', label: 'Want to Visit' },
+  { value: 'planning', label: 'Planning' },
+  { value: 'visited', label: 'Visited' },
+];
+
+export const TRIP_STATUS_LABEL_MAP = TRIP_STATUS_OPTIONS.reduce((acc, s) => {
+  acc[s.value] = s.label;
+  return acc;
+}, {});
+
+export const TRIP_LINK_CATEGORIES = [
+  { value: 'itinerary', label: 'Itinerary' },
+  { value: 'lodging', label: 'Lodging' },
+  { value: 'flight', label: 'Flights' },
+  { value: 'car_rental', label: 'Car Rental' },
+  { value: 'dining', label: 'Dining' },
+  { value: 'activity', label: 'Activities' },
+];
+
+export const TRIP_LINK_CATEGORY_LABEL_MAP = TRIP_LINK_CATEGORIES.reduce((acc, c) => {
+  acc[c.value] = c.label;
+  return acc;
+}, {});
