@@ -108,6 +108,11 @@ export const api = {
       method: 'DELETE',
     }),
 
+  refreshTripPhoto: (id) =>
+    request(`/api/trips/${id}/refresh-photo`, {
+      method: 'POST',
+    }),
+
   addTripLink: (tripId, link) =>
     request(`/api/trips/${tripId}/links`, {
       method: 'POST',

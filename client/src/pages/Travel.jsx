@@ -41,7 +41,7 @@ export default function Travel({ trips, loading, onChange }) {
     }
   }
 
-  if (loading) return <Spinner />;
+  if (loading && trips.length === 0) return <Spinner />;
 
   return (
     <div>

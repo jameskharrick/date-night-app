@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const supabase = require('../db');
 const { uploadBuffer, destroyAsset } = require('../utils/cloudinary');
+const { getCityPhoto, getRandomCityPhoto, locationQuery } = require('../utils/unsplash');
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
@@ -32,6 +33,8 @@ router.post('/', async (req, res) => {
   try {
     const { city, region, country, start_date, end_date, notes } = req.body;
 
+    const photo_url = await getCityPhoto(locationQuery(city, region, country));
+
     const { data, error } = await supabase
       .from('trips')
       .insert({
@@ -42,6 +45,7 @@ router.post('/', async (req, res) => {
         end_date: end_date || null,
         notes: notes || null,
         status: 'want_to_visit',
+        photo_url,
       })
       .select()
       .single();
@@ -71,6 +75,24 @@ router.patch('/:id', async (req, res) => {
     if (rating !== undefined) updates.rating = rating;
     if (notes !== undefined) updates.notes = notes;
 
+    if (city !== undefined || region !== undefined || country !== undefined) {
+      const { data: current, error: currentError } = await supabase
+        .from('trips')
+        .select('city, region, country')
+        .eq('id', id)
+        .single();
+
+      if (currentError) throw currentError;
+
+      const newCity = city !== undefined ? city : current.city;
+      const newRegion = region !== undefined ? region : current.region;
+      const newCountry = country !== undefined ? country : current.country;
+
+      if (newCity !== current.city || newRegion !== current.region || newCountry !== current.country) {
+        updates.photo_url = await getCityPhoto(locationQuery(newCity, newRegion, newCountry));
+      }
+    }
+
     const { data, error } = await supabase
       .from('trips')
       .update(updates)
@@ -84,6 +106,41 @@ router.patch('/:id', async (req, res) => {
   } catch (err) {
     console.error('PATCH /api/trips/:id error:', err.message);
     res.status(500).json({ error: 'Failed to update trip' });
+  }
+});
+
+// POST /api/trips/:id/refresh-photo
+router.post('/:id/refresh-photo', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data: trip, error: tripError } = await supabase
+      .from('trips')
+      .select('city, region, country')
+      .eq('id', id)
+      .single();
+
+    if (tripError) throw tripError;
+
+    const photo_url = await getRandomCityPhoto(locationQuery(trip.city, trip.region, trip.country));
+
+    if (!photo_url) {
+      return res.status(502).json({ error: 'No new photo found' });
+    }
+
+    const { data, error } = await supabase
+      .from('trips')
+      .update({ photo_url, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (err) {
+    console.error('POST /api/trips/:id/refresh-photo error:', err.message);
+    res.status(500).json({ error: 'Failed to refresh photo' });
   }
 });
 

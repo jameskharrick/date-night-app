@@ -76,6 +76,7 @@ create table trips (
   end_date date,
   rating int,
   notes text,
+  photo_url text,
   added_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -116,14 +117,22 @@ Trip photos and videos are stored in [Cloudinary](https://cloudinary.com/).
 2. From your Cloudinary dashboard, copy the **Cloud Name**, **API Key**, and **API Secret** — you'll need
    them for `server/.env`.
 
-## 5. Create Railway and Vercel accounts
+## 5. Create an Unsplash developer account
+
+Trip cards show a header photo of the city, fetched from [Unsplash](https://unsplash.com/).
+
+1. Sign up for a free account at [unsplash.com/developers](https://unsplash.com/developers).
+2. Create a new application (the demo tier is enough for personal use).
+3. Copy the **Access Key** — you'll need it for `server/.env`.
+
+## 6. Create Railway and Vercel accounts
 
 You'll need these later for deployment:
 
 - [Railway](https://railway.app/) — hosts the Express backend
 - [Vercel](https://vercel.com/) — hosts the React frontend
 
-## 6. Configure environment variables
+## 7. Configure environment variables
 
 ### Server (`/server/.env`)
 
@@ -136,6 +145,7 @@ SUPABASE_SERVICE_KEY=your_supabase_service_role_key
 CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
 CLOUDINARY_API_KEY=your_cloudinary_api_key
 CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+UNSPLASH_ACCESS_KEY=your_unsplash_access_key
 APP_PASSWORD=
 PORT=3001
 ```
@@ -154,7 +164,7 @@ VITE_API_URL=http://localhost:3001
 
 This is already set up for local development.
 
-## 7. Install and run
+## 8. Install and run
 
 From the project root:
 
@@ -166,9 +176,9 @@ npm run dev           # runs the server and client together
 - Backend runs at `http://localhost:3001`
 - Frontend runs at `http://localhost:5173`
 
-On first visit, you'll be asked for the shared password (the one set in step 5).
+On first visit, you'll be asked for the shared password (the one set in step 7).
 
-## 8. Deployment
+## 9. Deployment
 
 ### Backend → Railway
 
@@ -176,7 +186,7 @@ On first visit, you'll be asked for the shared password (the one set in step 5).
    service at the `/server` directory.
 2. Set the environment variables from `server/.env` (`TMDB_API_KEY`, `SUPABASE_URL`,
    `SUPABASE_SERVICE_KEY`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`,
-   `APP_PASSWORD`, `PORT`) in the Railway dashboard.
+   `UNSPLASH_ACCESS_KEY`, `APP_PASSWORD`, `PORT`) in the Railway dashboard.
 3. Railway will detect `server/railway.json`, build with Nixpacks, and start the app with
    `node index.js`. The healthcheck hits `GET /api/health`.
 4. Once deployed, copy the public Railway URL (e.g. `https://your-app.up.railway.app`).

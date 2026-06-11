@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Map, Hotel, Plane, Car, Utensils, Compass, Plus, Pencil, Trash2, ExternalLink, Check, X } from 'lucide-react';
+import { Map, Hotel, Plane, Car, Utensils, Compass, Plus, Pencil, Trash2, ExternalLink, Check, X, Save } from 'lucide-react';
 import { TRIP_LINK_CATEGORIES } from '../utils/constants';
 import { api } from '../utils/api';
 
@@ -97,7 +97,6 @@ function AddLinkForm({ category, onAdd, onCancel }) {
       await onAdd({ category, label: label.trim(), url: url.trim() });
       setLabel('');
       setUrl('');
-      onCancel();
     } finally {
       setSubmitting(false);
     }
@@ -119,7 +118,7 @@ function AddLinkForm({ category, onAdd, onCancel }) {
           disabled={submitting || !label.trim() || !url.trim()}
           className="px-2 py-1 rounded-lg text-xs font-medium bg-amber-500 hover:bg-amber-400 text-slate-950 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Save
+          Add
         </button>
         <button
           type="button"
@@ -135,24 +134,29 @@ function AddLinkForm({ category, onAdd, onCancel }) {
 
 export default function TripLinksSection({ tripId, links, onChange }) {
   const [addingCategory, setAddingCategory] = useState(null);
+  const [localLinks, setLocalLinks] = useState(links || []);
+
+  useEffect(() => {
+    setLocalLinks(links || []);
+  }, [links]);
 
   async function handleAddLink(link) {
     try {
-      await api.addTripLink(tripId, link);
+      const created = await api.addTripLink(tripId, link);
+      setLocalLinks((prev) => [...prev, created]);
       toast.success('Link added');
-      onChange();
     } catch (err) {
       toast.error(`Failed to add link: ${err.message}`);
     }
   }
 
   const linksByCategory = {};
-  (links || []).forEach((link) => {
+  localLinks.forEach((link) => {
     if (!linksByCategory[link.category]) linksByCategory[link.category] = [];
     linksByCategory[link.category].push(link);
   });
 
-  const hasAnyLinks = (links || []).length > 0;
+  const hasAnyLinks = localLinks.length > 0;
 
   return (
     <div className="space-y-3">
@@ -187,6 +191,14 @@ export default function TripLinksSection({ tripId, links, onChange }) {
           </div>
         );
       })}
+
+      <button
+        onClick={onChange}
+        className="flex items-center gap-1.5 text-sm font-medium rounded-lg px-3 py-1.5 transition bg-amber-500 hover:bg-amber-400 text-slate-950"
+      >
+        <Save className="w-4 h-4" />
+        Save
+      </button>
     </div>
   );
 }
