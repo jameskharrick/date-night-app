@@ -15,6 +15,7 @@ router.get('/', async (req, res) => {
     const { data, error } = await supabase
       .from('trips')
       .select(TRIP_SELECT)
+      .order('position', { ascending: true, nullsFirst: false })
       .order('added_at', { ascending: false })
       .order('created_at', { foreignTable: 'trip_links', ascending: true })
       .order('created_at', { foreignTable: 'trip_media', ascending: true });
@@ -56,6 +57,29 @@ router.post('/', async (req, res) => {
   } catch (err) {
     console.error('POST /api/trips error:', err.message);
     res.status(500).json({ error: 'Failed to add trip' });
+  }
+});
+
+// PATCH /api/trips/reorder
+router.patch('/reorder', async (req, res) => {
+  try {
+    const { orderedIds } = req.body;
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0)
+      return res.status(400).json({ error: 'orderedIds must be a non-empty array' });
+
+    await Promise.all(
+      orderedIds.map((id, index) =>
+        supabase
+          .from('trips')
+          .update({ position: index, updated_at: new Date().toISOString() })
+          .eq('id', id)
+      )
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('PATCH /api/trips/reorder error:', err.message);
+    res.status(500).json({ error: 'Failed to reorder trips' });
   }
 });
 

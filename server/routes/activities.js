@@ -19,6 +19,7 @@ router.get('/', async (req, res) => {
     const { data, error } = await supabase
       .from('activities')
       .select(ACTIVITY_SELECT)
+      .order('position', { ascending: true, nullsFirst: false })
       .order('added_at', { ascending: false })
       .order('created_at', { foreignTable: 'activity_media', ascending: true });
 
@@ -58,6 +59,29 @@ router.post('/', async (req, res) => {
   } catch (err) {
     console.error('POST /api/activities error:', err.message);
     res.status(500).json({ error: 'Failed to add activity' });
+  }
+});
+
+// PATCH /api/activities/reorder
+router.patch('/reorder', async (req, res) => {
+  try {
+    const { orderedIds } = req.body;
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0)
+      return res.status(400).json({ error: 'orderedIds must be a non-empty array' });
+
+    await Promise.all(
+      orderedIds.map((id, index) =>
+        supabase
+          .from('activities')
+          .update({ position: index, updated_at: new Date().toISOString() })
+          .eq('id', id)
+      )
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('PATCH /api/activities/reorder error:', err.message);
+    res.status(500).json({ error: 'Failed to reorder activities' });
   }
 });
 

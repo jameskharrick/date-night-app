@@ -1,15 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { Plus } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import ActivityItem from '../components/ActivityItem';
 import AddActivityForm from '../components/AddActivityForm';
+import SortableWrapper from '../components/SortableWrapper';
 import Spinner from '../components/Spinner';
 import { api } from '../utils/api';
+import { applyTabReorder } from '../utils/dragHelpers';
 import { ACTIVITY_STATUS_OPTIONS } from '../utils/constants';
 
 export default function Activity({ activities, loading, onChange }) {
   const [activeStatus, setActiveStatus] = useState(ACTIVITY_STATUS_OPTIONS[0].value);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [orderedActivities, setOrderedActivities] = useState(activities);
+  const isReorderingRef = useRef(false);
+
+  useEffect(() => { setOrderedActivities(activities); }, [activities]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+  );
 
   async function handleAddActivity(activityData) {
     try {
@@ -41,6 +54,27 @@ export default function Activity({ activities, loading, onChange }) {
     }
   }
 
+  async function handleDragEnd(event) {
+    const { active, over } = event;
+    if (!over || active.id === over.id || isReorderingRef.current) return;
+    const tabActivities = orderedActivities.filter((a) => a.status === activeStatus);
+    const oldIndex = tabActivities.findIndex((a) => a.id === active.id);
+    const newIndex = tabActivities.findIndex((a) => a.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const { newAllItems, reorderedIds } = applyTabReorder(orderedActivities, tabActivities, oldIndex, newIndex);
+    const previous = orderedActivities;
+    setOrderedActivities(newAllItems);
+    isReorderingRef.current = true;
+    try {
+      await api.reorderActivities(reorderedIds);
+    } catch {
+      toast.error('Failed to save order');
+      setOrderedActivities(previous);
+    } finally {
+      isReorderingRef.current = false;
+    }
+  }
+
   if (loading && activities.length === 0) return <Spinner />;
 
   return (
@@ -62,7 +96,7 @@ export default function Activity({ activities, loading, onChange }) {
         </div>
       )}
 
-      {activities.length === 0 ? (
+      {orderedActivities.length === 0 ? (
         <div className="text-center text-slate-400 py-20 bg-slate-800 border border-slate-700 rounded-xl">
           <p className="text-lg">No activities yet.</p>
           <p className="text-sm mt-1">Start adding things you'd like to try together.</p>
@@ -71,7 +105,7 @@ export default function Activity({ activities, loading, onChange }) {
         <>
           <div className="flex gap-2 bg-slate-900 rounded-lg p-1 mb-4 overflow-x-auto">
             {ACTIVITY_STATUS_OPTIONS.map((opt) => {
-              const count = activities.filter((a) => a.status === opt.value).length;
+              const count = orderedActivities.filter((a) => a.status === opt.value).length;
               const active = activeStatus === opt.value;
               return (
                 <button
@@ -88,7 +122,7 @@ export default function Activity({ activities, loading, onChange }) {
           </div>
 
           {(() => {
-            const activeActivities = activities.filter((a) => a.status === activeStatus);
+            const activeActivities = orderedActivities.filter((a) => a.status === activeStatus);
 
             if (activeActivities.length === 0) {
               return (
@@ -99,17 +133,22 @@ export default function Activity({ activities, loading, onChange }) {
             }
 
             return (
-              <div className="space-y-3">
-                {activeActivities.map((activity) => (
-                  <ActivityItem
-                    key={activity.id}
-                    activity={activity}
-                    onUpdate={handleUpdate}
-                    onRemove={handleRemove}
-                    onChange={onChange}
-                  />
-                ))}
-              </div>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={activeActivities.map((a) => a.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-3">
+                    {activeActivities.map((activity) => (
+                      <SortableWrapper key={activity.id} id={activity.id}>
+                        <ActivityItem
+                          activity={activity}
+                          onUpdate={handleUpdate}
+                          onRemove={handleRemove}
+                          onChange={onChange}
+                        />
+                      </SortableWrapper>
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             );
           })()}
         </>

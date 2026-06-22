@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
+import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import WatchlistItem from '../components/WatchlistItem';
+import SortableWrapper from '../components/SortableWrapper';
 import StatsPanel from '../components/StatsPanel';
 import Spinner from '../components/Spinner';
 import { api } from '../utils/api';
+import { applyTabReorder } from '../utils/dragHelpers';
 import { seenKey } from '../utils/seen';
 import { STATUS_OPTIONS } from '../utils/constants';
 
@@ -17,8 +21,17 @@ export default function Watchlist({ watchlist, loading, onChange, seenStatus, on
   const [seenFilterJames, setSeenFilterJames] = useState('any');
   const [seenFilterGurleen, setSeenFilterGurleen] = useState('any');
   const [activeStatus, setActiveStatus] = useState(STATUS_OPTIONS[0].value);
+  const [orderedWatchlist, setOrderedWatchlist] = useState(watchlist);
+  const isReorderingRef = useRef(false);
 
-  const visibleWatchlist = watchlist.filter((item) => {
+  useEffect(() => { setOrderedWatchlist(watchlist); }, [watchlist]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+  );
+
+  const visibleWatchlist = orderedWatchlist.filter((item) => {
     const seen = seenStatus[seenKey(item)];
     const seenJames = Boolean(seen?.seen_james);
     const seenGurleen = Boolean(seen?.seen_gurleen);
@@ -48,6 +61,27 @@ export default function Watchlist({ watchlist, loading, onChange, seenStatus, on
       onChange();
     } catch (err) {
       toast.error(`Failed to remove: ${err.message}`);
+    }
+  }
+
+  async function handleDragEnd(event) {
+    const { active, over } = event;
+    if (!over || active.id === over.id || isReorderingRef.current) return;
+    const activeItems = visibleWatchlist.filter((item) => item.status === activeStatus);
+    const oldIndex = activeItems.findIndex((i) => i.id === active.id);
+    const newIndex = activeItems.findIndex((i) => i.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const { newAllItems, reorderedIds } = applyTabReorder(orderedWatchlist, activeItems, oldIndex, newIndex);
+    const previous = orderedWatchlist;
+    setOrderedWatchlist(newAllItems);
+    isReorderingRef.current = true;
+    try {
+      await api.reorderWatchlist(reorderedIds);
+    } catch {
+      toast.error('Failed to save order');
+      setOrderedWatchlist(previous);
+    } finally {
+      isReorderingRef.current = false;
     }
   }
 
@@ -91,7 +125,7 @@ export default function Watchlist({ watchlist, loading, onChange, seenStatus, on
           </div>
         </div>
 
-        {watchlist.length === 0 ? (
+        {orderedWatchlist.length === 0 ? (
           <div className="text-center text-slate-400 py-20 bg-slate-800 border border-slate-700 rounded-xl">
             <p className="text-lg">Your watchlist is empty.</p>
             <p className="text-sm mt-1">Head to Discover to find something to watch together.</p>
@@ -131,18 +165,23 @@ export default function Watchlist({ watchlist, loading, onChange, seenStatus, on
               }
 
               return (
-                <div className="space-y-3">
-                  {activeItems.map((item) => (
-                    <WatchlistItem
-                      key={item.id}
-                      item={item}
-                      onUpdate={handleUpdate}
-                      onRemove={handleRemove}
-                      seen={seenStatus[seenKey(item)]}
-                      onToggleSeen={onToggleSeen}
-                    />
-                  ))}
-                </div>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={activeItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-3">
+                      {activeItems.map((item) => (
+                        <SortableWrapper key={item.id} id={item.id}>
+                          <WatchlistItem
+                            item={item}
+                            onUpdate={handleUpdate}
+                            onRemove={handleRemove}
+                            seen={seenStatus[seenKey(item)]}
+                            onToggleSeen={onToggleSeen}
+                          />
+                        </SortableWrapper>
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
               );
             })()}
           </>

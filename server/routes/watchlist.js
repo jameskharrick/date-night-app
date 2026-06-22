@@ -9,6 +9,7 @@ router.get('/', async (req, res) => {
     const { data, error } = await supabase
       .from('watchlist')
       .select('*')
+      .order('position', { ascending: true, nullsFirst: false })
       .order('added_at', { ascending: false });
 
     if (error) throw error;
@@ -46,6 +47,29 @@ router.post('/', async (req, res) => {
   } catch (err) {
     console.error('POST /api/watchlist error:', err.message);
     res.status(500).json({ error: 'Failed to add to watchlist' });
+  }
+});
+
+// PATCH /api/watchlist/reorder
+router.patch('/reorder', async (req, res) => {
+  try {
+    const { orderedIds } = req.body;
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0)
+      return res.status(400).json({ error: 'orderedIds must be a non-empty array' });
+
+    await Promise.all(
+      orderedIds.map((id, index) =>
+        supabase
+          .from('watchlist')
+          .update({ position: index, updated_at: new Date().toISOString() })
+          .eq('id', id)
+      )
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('PATCH /api/watchlist/reorder error:', err.message);
+    res.status(500).json({ error: 'Failed to reorder watchlist' });
   }
 });
 

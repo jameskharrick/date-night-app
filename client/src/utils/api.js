@@ -89,6 +89,12 @@ export const api = {
       method: 'DELETE',
     }),
 
+  reorderWatchlist: (orderedIds) =>
+    request('/api/watchlist/reorder', {
+      method: 'PATCH',
+      body: JSON.stringify({ orderedIds }),
+    }),
+
   getTrips: () => request('/api/trips'),
 
   addTrip: (trip) =>
@@ -106,6 +112,12 @@ export const api = {
   removeTrip: (id) =>
     request(`/api/trips/${id}`, {
       method: 'DELETE',
+    }),
+
+  reorderTrips: (orderedIds) =>
+    request('/api/trips/reorder', {
+      method: 'PATCH',
+      body: JSON.stringify({ orderedIds }),
     }),
 
   refreshTripPhoto: (id) =>
@@ -158,6 +170,12 @@ export const api = {
   removeActivity: (id) =>
     request(`/api/activities/${id}`, {
       method: 'DELETE',
+    }),
+
+  reorderActivities: (orderedIds) =>
+    request('/api/activities/reorder', {
+      method: 'PATCH',
+      body: JSON.stringify({ orderedIds }),
     }),
 
   refreshActivityPhoto: (id) =>
