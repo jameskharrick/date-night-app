@@ -4,6 +4,7 @@ const TABS = [
   { id: 'discover', label: 'Discover' },
   { id: 'watchlist', label: 'Watchlist' },
   { id: 'travel', label: 'Travel' },
+  { id: 'activities', label: 'Activities' },
 ];
 
 export default function Navigation({ activeTab, onTabChange, onSignOut }) {

@@ -12,6 +12,8 @@ const watchlistRouter = require('./routes/watchlist');
 const tripsRouter = require('./routes/trips');
 const tripLinksRouter = require('./routes/trip-links');
 const tripMediaRouter = require('./routes/trip-media');
+const activitiesRouter = require('./routes/activities');
+const activityMediaRouter = require('./routes/activity-media');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -47,6 +49,8 @@ app.use('/api/watchlist', watchlistRouter);
 app.use('/api/trips', tripsRouter);
 app.use('/api/trip-links', tripLinksRouter);
 app.use('/api/trip-media', tripMediaRouter);
+app.use('/api/activities', activitiesRouter);
+app.use('/api/activity-media', activityMediaRouter);
 
 app.listen(PORT, () => {
   console.log(`Date Night server listening on port ${PORT}`);

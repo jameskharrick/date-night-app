@@ -5,6 +5,7 @@ import Navigation from './components/Navigation';
 import Discover from './pages/Discover';
 import Watchlist from './pages/Watchlist';
 import Travel from './pages/Travel';
+import Activity from './pages/Activity';
 import { getStoredPassword, clearStoredPassword } from './utils/password';
 import { seenKey } from './utils/seen';
 import { api } from './utils/api';
@@ -16,6 +17,8 @@ export default function App() {
   const [watchlistLoading, setWatchlistLoading] = useState(true);
   const [trips, setTrips] = useState([]);
   const [tripsLoading, setTripsLoading] = useState(true);
+  const [activities, setActivities] = useState([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
   const [seenStatus, setSeenStatus] = useState({});
 
   const loadWatchlist = useCallback(async () => {
@@ -42,6 +45,18 @@ export default function App() {
     }
   }, []);
 
+  const loadActivities = useCallback(async () => {
+    setActivitiesLoading(true);
+    try {
+      const data = await api.getActivities();
+      setActivities(data);
+    } catch (err) {
+      console.error('Failed to load activities:', err.message);
+    } finally {
+      setActivitiesLoading(false);
+    }
+  }, []);
+
   const loadSeenStatus = useCallback(async () => {
     try {
       const data = await api.getSeenStatus();
@@ -59,9 +74,10 @@ export default function App() {
     if (hasPassword) {
       loadWatchlist();
       loadTrips();
+      loadActivities();
       loadSeenStatus();
     }
-  }, [hasPassword, loadWatchlist, loadTrips, loadSeenStatus]);
+  }, [hasPassword, loadWatchlist, loadTrips, loadActivities, loadSeenStatus]);
 
   async function handleToggleSeen(item, person) {
     try {
@@ -117,8 +133,10 @@ export default function App() {
             seenStatus={seenStatus}
             onToggleSeen={handleToggleSeen}
           />
-        ) : (
+        ) : activeTab === 'travel' ? (
           <Travel trips={trips} loading={tripsLoading} onChange={loadTrips} />
+        ) : (
+          <Activity activities={activities} loading={activitiesLoading} onChange={loadActivities} />
         )}
       </main>
     </div>

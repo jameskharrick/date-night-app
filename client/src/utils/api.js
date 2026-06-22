@@ -140,6 +140,41 @@ export const api = {
     request(`/api/trip-media/${mediaId}`, {
       method: 'DELETE',
     }),
+
+  getActivities: () => request('/api/activities'),
+
+  addActivity: (activity) =>
+    request('/api/activities', {
+      method: 'POST',
+      body: JSON.stringify(activity),
+    }),
+
+  updateActivity: (id, updates) =>
+    request(`/api/activities/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    }),
+
+  removeActivity: (id) =>
+    request(`/api/activities/${id}`, {
+      method: 'DELETE',
+    }),
+
+  refreshActivityPhoto: (id) =>
+    request(`/api/activities/${id}/refresh-photo`, {
+      method: 'POST',
+    }),
+
+  addActivityMedia: (activityId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return requestForm(`/api/activities/${activityId}/media`, formData);
+  },
+
+  removeActivityMedia: (mediaId) =>
+    request(`/api/activity-media/${mediaId}`, {
+      method: 'DELETE',
+    }),
 };
 
 export { API_URL };

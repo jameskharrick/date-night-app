@@ -59,3 +59,19 @@ export const TRIP_LINK_CATEGORY_LABEL_MAP = TRIP_LINK_CATEGORIES.reduce((acc, c)
   acc[c.value] = c.label;
   return acc;
 }, {});
+
+export const ACTIVITY_STATUS_OPTIONS = [
+  { value: 'want_to_try', label: 'Want To Try' },
+  { value: 'planning', label: 'Planning' },
+  { value: 'tried', label: 'Tried' },
+];
+
+export const ACTIVITY_STATUS_LABEL_MAP = ACTIVITY_STATUS_OPTIONS.reduce((acc, s) => {
+  acc[s.value] = s.label;
+  return acc;
+}, {});
+
+export const ADDED_BY_OPTIONS = [
+  { value: 'James', label: 'James' },
+  { value: 'Gurleen', label: 'Gurleen' },
+];
