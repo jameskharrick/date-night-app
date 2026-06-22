@@ -32,12 +32,16 @@ async function getRandomCityPhoto(query) {
   if (!UNSPLASH_ACCESS_KEY || !query) return null;
 
   try {
-    const res = await axios.get('https://api.unsplash.com/photos/random', {
-      params: { query, orientation: 'landscape' },
+    const res = await axios.get('https://api.unsplash.com/search/photos', {
+      params: { query, per_page: 20, orientation: 'landscape' },
       headers: { Authorization: `Client-ID ${UNSPLASH_ACCESS_KEY}` },
     });
 
-    return res.data?.urls?.regular || null;
+    const results = res.data.results || [];
+    if (results.length === 0) return null;
+
+    const pick = results[Math.floor(Math.random() * results.length)];
+    return pick?.urls?.regular || null;
   } catch (err) {
     console.error('Unsplash random photo lookup failed:', err.message);
     return null;
