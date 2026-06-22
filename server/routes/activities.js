@@ -9,8 +9,8 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 
 
 const ACTIVITY_SELECT = '*, activity_media(*)';
 
-function activityQuery(name, location) {
-  return [name, location].filter(Boolean).join(', ');
+function activityQuery(name) {
+  return name || '';
 }
 
 // GET /api/activities
@@ -76,20 +76,17 @@ router.patch('/:id', async (req, res) => {
     if (notes !== undefined) updates.notes = notes;
     if (rating !== undefined) updates.rating = rating;
 
-    if (name !== undefined || location !== undefined) {
+    if (name !== undefined) {
       const { data: current, error: currentError } = await supabase
         .from('activities')
-        .select('name, location')
+        .select('name')
         .eq('id', id)
         .single();
 
       if (currentError) throw currentError;
 
-      const newName = name !== undefined ? name : current.name;
-      const newLocation = location !== undefined ? location : current.location;
-
-      if (newName !== current.name || newLocation !== current.location) {
-        updates.photo_url = await getCityPhoto(activityQuery(newName, newLocation));
+      if (name !== current.name) {
+        updates.photo_url = await getCityPhoto(activityQuery(name));
       }
     }
 
@@ -116,13 +113,13 @@ router.post('/:id/refresh-photo', async (req, res) => {
 
     const { data: activity, error: activityError } = await supabase
       .from('activities')
-      .select('name, location')
+      .select('name')
       .eq('id', id)
       .single();
 
     if (activityError) throw activityError;
 
-    const photo_url = await getRandomCityPhoto(activityQuery(activity.name, activity.location));
+    const photo_url = await getRandomCityPhoto(activityQuery(activity.name));
 
     if (!photo_url) {
       return res.status(502).json({ error: 'No new photo found' });
