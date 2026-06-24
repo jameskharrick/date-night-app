@@ -8,15 +8,6 @@ const router = express.Router();
 const PAGES_PER_TYPE = 2; // 20 results per page from TMDB discover
 const MAX_PAGE_POOL = 10; // pick random pages from this range for variety between requests
 
-function shuffle(array) {
-  const arr = [...array];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
 function pickRandomPages(maxPage, count) {
   const pages = new Set();
   while (pages.size < Math.min(count, maxPage)) {
@@ -97,9 +88,7 @@ router.get('/', async (req, res) => {
       );
     }
 
-    const shuffled = shuffle(filtered).slice(0, 50);
-
-    res.json(shuffled);
+    res.json(filtered);
   } catch (err) {
     console.error('GET /api/recommendations error:', err.message);
     res.status(500).json({ error: 'Failed to fetch recommendations' });

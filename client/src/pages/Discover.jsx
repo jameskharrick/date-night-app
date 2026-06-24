@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Shuffle } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import FilterPanel from '../components/FilterPanel';
 import RecommendationCard from '../components/RecommendationCard';
 import SearchBar from '../components/SearchBar';
 import Spinner from '../components/Spinner';
 import { api } from '../utils/api';
-import { pickRandomSubset } from '../utils/shuffle';
 import { seenKey } from '../utils/seen';
 import { CURRENT_YEAR, DEFAULT_YEAR_FROM } from '../utils/constants';
+
+const PAGE_SIZE = 10;
 
 const DEFAULT_FILTERS = {
   type: 'both',
@@ -22,17 +23,42 @@ const DEFAULT_FILTERS = {
   hideSeenGurleen: false,
 };
 
+function Pagination({ page, total, onChange }) {
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (total <= PAGE_SIZE) return null;
+  return (
+    <div className="flex items-center justify-center gap-3 mt-6">
+      <button
+        onClick={() => onChange(page - 1)}
+        disabled={page === 1}
+        className="flex items-center gap-1 text-sm font-medium rounded-lg px-3 py-1.5 transition bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <ChevronLeft className="w-4 h-4" /> Previous
+      </button>
+      <span className="text-slate-400 text-sm">Page {page} of {totalPages}</span>
+      <button
+        onClick={() => onChange(page + 1)}
+        disabled={page >= totalPages}
+        className="flex items-center gap-1 text-sm font-medium rounded-lg px-3 py-1.5 transition bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        Next <ChevronRight className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
 export default function Discover({ watchlist, onWatchlistChange, seenStatus, onToggleSeen }) {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [genreOptions, setGenreOptions] = useState({ movie: [], tv: [] });
-  const [pool, setPool] = useState([]);
-  const [displayed, setDisplayed] = useState([]);
+  const [results, setResults] = useState([]);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
+  const [searchPage, setSearchPage] = useState(1);
   const [searchLoading, setSearchLoading] = useState(false);
 
   useEffect(() => {
@@ -66,10 +92,10 @@ export default function Discover({ watchlist, onWatchlistChange, seenStatus, onT
         params.yearTo = filters.yearTo;
       }
 
-      const results = await api.getRecommendations(params);
-      const filtered = results.filter((item) => !isHiddenBySeenFilters(item));
-      setPool(filtered);
-      setDisplayed(pickRandomSubset(filtered));
+      const fetched = await api.getRecommendations(params);
+      const filtered = fetched.filter((item) => !isHiddenBySeenFilters(item));
+      setResults(filtered);
+      setPage(1);
       setHasSearched(true);
 
       if (filtered.length === 0) {
@@ -82,10 +108,6 @@ export default function Discover({ watchlist, onWatchlistChange, seenStatus, onT
     }
   }
 
-  function handleReshuffle() {
-    setDisplayed(pickRandomSubset(pool));
-  }
-
   async function handleSearch(e) {
     e.preventDefault();
     const trimmed = searchQuery.trim();
@@ -93,9 +115,10 @@ export default function Discover({ watchlist, onWatchlistChange, seenStatus, onT
 
     setSearchLoading(true);
     try {
-      const results = await api.search({ query: trimmed, type: filters.type });
-      const filtered = results.filter((item) => !isHiddenBySeenFilters(item));
+      const fetched = await api.search({ query: trimmed, type: filters.type });
+      const filtered = fetched.filter((item) => !isHiddenBySeenFilters(item));
       setSearchResults(filtered);
+      setSearchPage(1);
       setSubmittedQuery(trimmed);
 
       if (filtered.length === 0) {
@@ -112,13 +135,24 @@ export default function Discover({ watchlist, onWatchlistChange, seenStatus, onT
     setSearchQuery('');
     setSubmittedQuery('');
     setSearchResults(null);
+    setSearchPage(1);
   }
 
   function handleNotInterested(item) {
     const matches = (p) => p.tmdb_id === item.tmdb_id && p.type === item.type;
-    setPool((prev) => prev.filter((p) => !matches(p)));
-    setDisplayed((prev) => prev.filter((p) => !matches(p)));
-    setSearchResults((prev) => (prev ? prev.filter((p) => !matches(p)) : prev));
+    setResults((prev) => {
+      const next = prev.filter((p) => !matches(p));
+      const totalPages = Math.max(1, Math.ceil(next.length / PAGE_SIZE));
+      setPage((p) => Math.min(p, totalPages));
+      return next;
+    });
+    setSearchResults((prev) => {
+      if (!prev) return prev;
+      const next = prev.filter((p) => !matches(p));
+      const totalPages = Math.max(1, Math.ceil(next.length / PAGE_SIZE));
+      setSearchPage((p) => Math.min(p, totalPages));
+      return next;
+    });
   }
 
   async function handleToggleSeen(item, person) {
@@ -131,9 +165,19 @@ export default function Discover({ watchlist, onWatchlistChange, seenStatus, onT
 
     if (shouldHide) {
       const matches = (p) => p.tmdb_id === item.tmdb_id && p.type === item.type;
-      setPool((prev) => prev.filter((p) => !matches(p)));
-      setDisplayed((prev) => prev.filter((p) => !matches(p)));
-      setSearchResults((prev) => (prev ? prev.filter((p) => !matches(p)) : prev));
+      setResults((prev) => {
+        const next = prev.filter((p) => !matches(p));
+        const totalPages = Math.max(1, Math.ceil(next.length / PAGE_SIZE));
+        setPage((p) => Math.min(p, totalPages));
+        return next;
+      });
+      setSearchResults((prev) => {
+        if (!prev) return prev;
+        const next = prev.filter((p) => !matches(p));
+        const totalPages = Math.max(1, Math.ceil(next.length / PAGE_SIZE));
+        setSearchPage((p) => Math.min(p, totalPages));
+        return next;
+      });
     }
   }
 
@@ -158,6 +202,9 @@ export default function Discover({ watchlist, onWatchlistChange, seenStatus, onT
   function isAdded(item) {
     return watchlist.some((w) => w.tmdb_id === item.tmdb_id && w.type === item.type);
   }
+
+  const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pagedSearch = searchResults?.slice((searchPage - 1) * PAGE_SIZE, searchPage * PAGE_SIZE);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
@@ -195,19 +242,22 @@ export default function Discover({ watchlist, onWatchlistChange, seenStatus, onT
                 <p className="text-lg">No results. Try a different search.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
-                {searchResults.map((item) => (
-                  <RecommendationCard
-                    key={`${item.type}-${item.tmdb_id}`}
-                    item={item}
-                    onAdd={handleAdd}
-                    onNotInterested={handleNotInterested}
-                    isAdded={isAdded(item)}
-                    seen={seenStatus[seenKey(item)]}
-                    onToggleSeen={handleToggleSeen}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {pagedSearch.map((item) => (
+                    <RecommendationCard
+                      key={`${item.type}-${item.tmdb_id}`}
+                      item={item}
+                      onAdd={handleAdd}
+                      onNotInterested={handleNotInterested}
+                      isAdded={isAdded(item)}
+                      seen={seenStatus[seenKey(item)]}
+                      onToggleSeen={handleToggleSeen}
+                    />
+                  ))}
+                </div>
+                <Pagination page={searchPage} total={searchResults.length} onChange={setSearchPage} />
+              </>
             )}
           </>
         )}
@@ -222,26 +272,20 @@ export default function Discover({ watchlist, onWatchlistChange, seenStatus, onT
               </div>
             )}
 
-            {!loading && hasSearched && displayed.length === 0 && (
+            {!loading && hasSearched && results.length === 0 && (
               <div className="text-center text-slate-400 py-20">
                 <p className="text-lg">No results. Try different filters.</p>
               </div>
             )}
 
-            {!loading && displayed.length > 0 && (
+            {!loading && results.length > 0 && (
               <>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-slate-200">Recommendations</h2>
-                  <button
-                    onClick={handleReshuffle}
-                    className="flex items-center gap-1.5 text-sm font-medium rounded-lg px-3 py-1.5 transition bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200"
-                  >
-                    <Shuffle className="w-4 h-4" /> Reshuffle
-                  </button>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {displayed.map((item) => (
+                  {pagedResults.map((item) => (
                     <RecommendationCard
                       key={`${item.type}-${item.tmdb_id}`}
                       item={item}
@@ -253,6 +297,7 @@ export default function Discover({ watchlist, onWatchlistChange, seenStatus, onT
                     />
                   ))}
                 </div>
+                <Pagination page={page} total={results.length} onChange={setPage} />
               </>
             )}
           </>
