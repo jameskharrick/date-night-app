@@ -3,11 +3,11 @@ const supabase = require('../db');
 
 const router = express.Router();
 
-// GET /api/watchlist
+// GET /api/games
 router.get('/', async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from('watchlist')
+      .from('games')
       .select('*')
       .order('position', { ascending: true, nullsFirst: false })
       .order('added_at', { ascending: false });
@@ -16,27 +16,26 @@ router.get('/', async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    console.error('GET /api/watchlist error:', err.message);
-    res.status(500).json({ error: 'Failed to fetch watchlist' });
+    console.error('GET /api/games error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch games' });
   }
 });
 
-// POST /api/watchlist
+// POST /api/games
 router.post('/', async (req, res) => {
   try {
-    const { tmdb_id, type, title, poster_path, genres, platforms, tmdb_score, status } = req.body;
+    const { igdb_id, title, cover_path, genres, platforms, igdb_score, status } = req.body;
 
     const { data, error } = await supabase
-      .from('watchlist')
+      .from('games')
       .insert({
-        tmdb_id,
-        type,
+        igdb_id,
         title,
-        poster_path,
+        cover_path,
         genres: JSON.stringify(genres ?? []),
         platforms: JSON.stringify(platforms ?? []),
-        tmdb_score,
-        status: status || 'want_to_watch',
+        igdb_score,
+        status: status || 'want_to_play',
       })
       .select()
       .single();
@@ -45,12 +44,12 @@ router.post('/', async (req, res) => {
 
     res.status(201).json(data);
   } catch (err) {
-    console.error('POST /api/watchlist error:', err.message);
-    res.status(500).json({ error: 'Failed to add to watchlist' });
+    console.error('POST /api/games error:', err.message);
+    res.status(500).json({ error: 'Failed to add game' });
   }
 });
 
-// PATCH /api/watchlist/reorder
+// PATCH /api/games/reorder
 router.patch('/reorder', async (req, res) => {
   try {
     const { orderedIds } = req.body;
@@ -60,7 +59,7 @@ router.patch('/reorder', async (req, res) => {
     await Promise.all(
       orderedIds.map((id, index) =>
         supabase
-          .from('watchlist')
+          .from('games')
           .update({ position: index, updated_at: new Date().toISOString() })
           .eq('id', id)
       )
@@ -68,12 +67,12 @@ router.patch('/reorder', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('PATCH /api/watchlist/reorder error:', err.message);
-    res.status(500).json({ error: 'Failed to reorder watchlist' });
+    console.error('PATCH /api/games/reorder error:', err.message);
+    res.status(500).json({ error: 'Failed to reorder games' });
   }
 });
 
-// PATCH /api/watchlist/:id
+// PATCH /api/games/:id
 router.patch('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -85,7 +84,7 @@ router.patch('/:id', async (req, res) => {
     if (note !== undefined) updates.note = note;
 
     const { data, error } = await supabase
-      .from('watchlist')
+      .from('games')
       .update(updates)
       .eq('id', id)
       .select()
@@ -95,24 +94,24 @@ router.patch('/:id', async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    console.error('PATCH /api/watchlist/:id error:', err.message);
-    res.status(500).json({ error: 'Failed to update watchlist entry' });
+    console.error('PATCH /api/games/:id error:', err.message);
+    res.status(500).json({ error: 'Failed to update game' });
   }
 });
 
-// DELETE /api/watchlist/:id
+// DELETE /api/games/:id
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const { error } = await supabase.from('watchlist').delete().eq('id', id);
+    const { error } = await supabase.from('games').delete().eq('id', id);
 
     if (error) throw error;
 
     res.json({ success: true });
   } catch (err) {
-    console.error('DELETE /api/watchlist/:id error:', err.message);
-    res.status(500).json({ error: 'Failed to delete watchlist entry' });
+    console.error('DELETE /api/games/:id error:', err.message);
+    res.status(500).json({ error: 'Failed to delete game' });
   }
 });
 

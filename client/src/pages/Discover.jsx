@@ -7,12 +7,13 @@ import SearchBar from '../components/SearchBar';
 import Spinner from '../components/Spinner';
 import { api } from '../utils/api';
 import { seenKey } from '../utils/seen';
+import { playedKey } from '../utils/played';
 import { CURRENT_YEAR, DEFAULT_YEAR_FROM } from '../utils/constants';
 
 const PAGE_SIZE = 10;
 
 const DEFAULT_FILTERS = {
-  type: 'both',
+  type: 'movie',
   genres: [],
   platforms: [],
   minScore: 0,
@@ -21,6 +22,8 @@ const DEFAULT_FILTERS = {
   surpriseMe: false,
   hideSeenJames: false,
   hideSeenGurleen: false,
+  hidePlayedJames: false,
+  hidePlayedGurleen: false,
 };
 
 function Pagination({ page, total, onChange }) {
@@ -47,9 +50,19 @@ function Pagination({ page, total, onChange }) {
   );
 }
 
-export default function Discover({ watchlist, onWatchlistChange, seenStatus, onToggleSeen }) {
+export default function Discover({
+  watchlist,
+  onWatchlistChange,
+  seenStatus,
+  onToggleSeen,
+  games,
+  onGamesChange,
+  playedStatus,
+  onTogglePlayed,
+}) {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [genreOptions, setGenreOptions] = useState({ movie: [], tv: [] });
+  const [gameGenreOptions, setGameGenreOptions] = useState([]);
   const [results, setResults] = useState([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -61,39 +74,69 @@ export default function Discover({ watchlist, onWatchlistChange, seenStatus, onT
   const [searchPage, setSearchPage] = useState(1);
   const [searchLoading, setSearchLoading] = useState(false);
 
+  const isGameMode = filters.type === 'game';
+
   useEffect(() => {
     api
       .getGenres()
       .then(setGenreOptions)
       .catch((err) => toast.error(`Failed to load genres: ${err.message}`));
+
+    api
+      .getGameGenres()
+      .then(setGameGenreOptions)
+      .catch((err) => console.error('Failed to load game genres:', err.message));
   }, []);
 
-  function isHiddenBySeenFilters(item) {
-    const seen = seenStatus[seenKey(item)];
-    if (!seen) return false;
-    if (filters.hideSeenJames && seen.seen_james) return true;
-    if (filters.hideSeenGurleen && seen.seen_gurleen) return true;
-    return false;
+  function isHiddenByFilters(item) {
+    if (isGameMode) {
+      const p = playedStatus[playedKey(item)];
+      if (!p) return false;
+      if (filters.hidePlayedJames && p.played_james) return true;
+      if (filters.hidePlayedGurleen && p.played_gurleen) return true;
+      return false;
+    } else {
+      const seen = seenStatus[seenKey(item)];
+      if (!seen) return false;
+      if (filters.hideSeenJames && seen.seen_james) return true;
+      if (filters.hideSeenGurleen && seen.seen_gurleen) return true;
+      return false;
+    }
   }
 
-  async function handleFindMovies() {
+  async function handleFind() {
     setLoading(true);
     try {
-      const params = {
-        type: filters.type,
-        surpriseMe: filters.surpriseMe ? 'true' : 'false',
-      };
+      let fetched;
 
-      if (!filters.surpriseMe) {
-        if (filters.genres.length > 0) params.genres = filters.genres.join(',');
-        if (filters.platforms.length > 0) params.platforms = filters.platforms.join(',');
-        params.minScore = filters.minScore;
-        params.yearFrom = filters.yearFrom;
-        params.yearTo = filters.yearTo;
+      if (isGameMode) {
+        const params = {
+          surpriseMe: filters.surpriseMe ? 'true' : 'false',
+        };
+        if (!filters.surpriseMe) {
+          if (filters.genres.length > 0) params.genres = filters.genres.join(',');
+          if (filters.platforms.length > 0) params.platforms = filters.platforms.join(',');
+          params.minScore = filters.minScore;
+          params.yearFrom = filters.yearFrom;
+          params.yearTo = filters.yearTo;
+        }
+        fetched = await api.getGameRecommendations(params);
+      } else {
+        const params = {
+          type: filters.type,
+          surpriseMe: filters.surpriseMe ? 'true' : 'false',
+        };
+        if (!filters.surpriseMe) {
+          if (filters.genres.length > 0) params.genres = filters.genres.join(',');
+          if (filters.platforms.length > 0) params.platforms = filters.platforms.join(',');
+          params.minScore = filters.minScore;
+          params.yearFrom = filters.yearFrom;
+          params.yearTo = filters.yearTo;
+        }
+        fetched = await api.getRecommendations(params);
       }
 
-      const fetched = await api.getRecommendations(params);
-      const filtered = fetched.filter((item) => !isHiddenBySeenFilters(item));
+      const filtered = fetched.filter((item) => !isHiddenByFilters(item));
       setResults(filtered);
       setPage(1);
       setHasSearched(true);
@@ -102,7 +145,7 @@ export default function Discover({ watchlist, onWatchlistChange, seenStatus, onT
         toast('No matches found. Try adjusting your filters.', { icon: '🔍' });
       }
     } catch (err) {
-      toast.error(`Failed to fetch recommendations: ${err.message}`);
+      toast.error(`Failed to fetch results: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -115,8 +158,14 @@ export default function Discover({ watchlist, onWatchlistChange, seenStatus, onT
 
     setSearchLoading(true);
     try {
-      const fetched = await api.search({ query: trimmed, type: filters.type });
-      const filtered = fetched.filter((item) => !isHiddenBySeenFilters(item));
+      let fetched;
+      if (isGameMode) {
+        fetched = await api.searchGames({ query: trimmed });
+      } else {
+        fetched = await api.search({ query: trimmed, type: filters.type });
+      }
+
+      const filtered = fetched.filter((item) => !isHiddenByFilters(item));
       setSearchResults(filtered);
       setSearchPage(1);
       setSubmittedQuery(trimmed);
@@ -139,7 +188,10 @@ export default function Discover({ watchlist, onWatchlistChange, seenStatus, onT
   }
 
   function handleNotInterested(item) {
-    const matches = (p) => p.tmdb_id === item.tmdb_id && p.type === item.type;
+    const matches = isGameMode
+      ? (p) => p.igdb_id === item.igdb_id
+      : (p) => p.tmdb_id === item.tmdb_id && p.type === item.type;
+
     setResults((prev) => {
       const next = prev.filter((p) => !matches(p));
       const totalPages = Math.max(1, Math.ceil(next.length / PAGE_SIZE));
@@ -155,7 +207,7 @@ export default function Discover({ watchlist, onWatchlistChange, seenStatus, onT
     });
   }
 
-  async function handleToggleSeen(item, person) {
+  async function handleToggleSeenLocal(item, person) {
     const updated = await onToggleSeen(item, person);
     if (!updated) return;
 
@@ -181,39 +233,116 @@ export default function Discover({ watchlist, onWatchlistChange, seenStatus, onT
     }
   }
 
-  async function handleAdd(item) {
-    try {
-      await api.addToWatchlist({
-        tmdb_id: item.tmdb_id,
-        type: item.type,
-        title: item.title,
-        poster_path: item.poster_path,
-        genres: item.genres,
-        platforms: item.platforms,
-        tmdb_score: item.tmdb_score,
+  async function handleTogglePlayedLocal(item, person) {
+    const updated = await onTogglePlayed(item, person);
+    if (!updated) return;
+
+    const shouldHide =
+      (filters.hidePlayedJames && updated.played_james) ||
+      (filters.hidePlayedGurleen && updated.played_gurleen);
+
+    if (shouldHide) {
+      const matches = (p) => p.igdb_id === item.igdb_id;
+      setResults((prev) => {
+        const next = prev.filter((p) => !matches(p));
+        const totalPages = Math.max(1, Math.ceil(next.length / PAGE_SIZE));
+        setPage((p) => Math.min(p, totalPages));
+        return next;
       });
-      toast.success(`Added "${item.title}" to watchlist`);
-      onWatchlistChange();
+      setSearchResults((prev) => {
+        if (!prev) return prev;
+        const next = prev.filter((p) => !matches(p));
+        const totalPages = Math.max(1, Math.ceil(next.length / PAGE_SIZE));
+        setSearchPage((p) => Math.min(p, totalPages));
+        return next;
+      });
+    }
+  }
+
+  async function handleAdd(item, status) {
+    try {
+      if (isGameMode) {
+        await api.addToGames({
+          igdb_id: item.igdb_id,
+          title: item.title,
+          cover_path: item.cover_path,
+          genres: item.genres,
+          platforms: item.platforms,
+          igdb_score: item.igdb_score,
+          status: status || 'want_to_play',
+        });
+        toast.success(`Added "${item.title}" to games list`);
+        onGamesChange();
+      } else {
+        await api.addToWatchlist({
+          tmdb_id: item.tmdb_id,
+          type: item.type,
+          title: item.title,
+          poster_path: item.poster_path,
+          genres: item.genres,
+          platforms: item.platforms,
+          tmdb_score: item.tmdb_score,
+          status: status || 'want_to_watch',
+        });
+        toast.success(`Added "${item.title}" to watchlist`);
+        onWatchlistChange();
+      }
     } catch (err) {
       toast.error(`Failed to add: ${err.message}`);
     }
   }
 
   function isAdded(item) {
+    if (isGameMode) {
+      return games.some((g) => g.igdb_id === item.igdb_id);
+    }
     return watchlist.some((w) => w.tmdb_id === item.tmdb_id && w.type === item.type);
+  }
+
+  function getCardProps(item) {
+    if (isGameMode) {
+      return {
+        played: playedStatus[playedKey(item)],
+        onTogglePlayed: handleTogglePlayedLocal,
+        seen: undefined,
+        onToggleSeen: undefined,
+      };
+    }
+    return {
+      seen: seenStatus[seenKey(item)],
+      onToggleSeen: handleToggleSeenLocal,
+      played: undefined,
+      onTogglePlayed: undefined,
+    };
+  }
+
+  function getCardKey(item) {
+    return isGameMode ? `game-${item.igdb_id}` : `${item.type}-${item.tmdb_id}`;
   }
 
   const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const pagedSearch = searchResults?.slice((searchPage - 1) * PAGE_SIZE, searchPage * PAGE_SIZE);
+
+  const emptyHint = isGameMode
+    ? 'Set your filters and hit "Find games to play" to get started.'
+    : 'Set your filters and hit "Find something to watch" to get started.';
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
       <aside>
         <FilterPanel
           filters={filters}
-          onChange={setFilters}
-          onSubmit={handleFindMovies}
+          onChange={(newFilters) => {
+            setFilters(newFilters);
+            if (newFilters.type !== filters.type) {
+              setResults([]);
+              setSearchResults(null);
+              setHasSearched(false);
+            }
+          }}
+          onSubmit={handleFind}
           genreOptions={genreOptions}
+          gameGenreOptions={gameGenreOptions}
           loading={loading}
         />
       </aside>
@@ -246,13 +375,13 @@ export default function Discover({ watchlist, onWatchlistChange, seenStatus, onT
                 <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
                   {pagedSearch.map((item) => (
                     <RecommendationCard
-                      key={`${item.type}-${item.tmdb_id}`}
+                      key={getCardKey(item)}
                       item={item}
                       onAdd={handleAdd}
                       onNotInterested={handleNotInterested}
                       isAdded={isAdded(item)}
-                      seen={seenStatus[seenKey(item)]}
-                      onToggleSeen={handleToggleSeen}
+                      isGameMode={isGameMode}
+                      {...getCardProps(item)}
                     />
                   ))}
                 </div>
@@ -268,7 +397,7 @@ export default function Discover({ watchlist, onWatchlistChange, seenStatus, onT
 
             {!loading && !hasSearched && (
               <div className="text-center text-slate-400 py-20">
-                <p className="text-lg">Set your filters and hit "Find something to watch" to get started.</p>
+                <p className="text-lg">{emptyHint}</p>
               </div>
             )}
 
@@ -281,19 +410,21 @@ export default function Discover({ watchlist, onWatchlistChange, seenStatus, onT
             {!loading && results.length > 0 && (
               <>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-slate-200">Recommendations</h2>
+                  <h2 className="text-lg font-semibold text-slate-200">
+                    {isGameMode ? 'Game Recommendations' : 'Recommendations'}
+                  </h2>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
                   {pagedResults.map((item) => (
                     <RecommendationCard
-                      key={`${item.type}-${item.tmdb_id}`}
+                      key={getCardKey(item)}
                       item={item}
                       onAdd={handleAdd}
                       onNotInterested={handleNotInterested}
                       isAdded={isAdded(item)}
-                      seen={seenStatus[seenKey(item)]}
-                      onToggleSeen={handleToggleSeen}
+                      isGameMode={isGameMode}
+                      {...getCardProps(item)}
                     />
                   ))}
                 </div>

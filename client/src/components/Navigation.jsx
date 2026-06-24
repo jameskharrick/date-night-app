@@ -3,6 +3,7 @@ import { Wine, LogOut } from 'lucide-react';
 const TABS = [
   { id: 'discover', label: 'Discover' },
   { id: 'watchlist', label: 'Watchlist' },
+  { id: 'games', label: 'Games' },
   { id: 'travel', label: 'Travel' },
   { id: 'activities', label: 'Activities' },
 ];

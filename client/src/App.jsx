@@ -4,10 +4,12 @@ import PasswordGate from './components/PasswordGate';
 import Navigation from './components/Navigation';
 import Discover from './pages/Discover';
 import Watchlist from './pages/Watchlist';
+import Games from './pages/Games';
 import Travel from './pages/Travel';
 import Activity from './pages/Activity';
 import { getStoredPassword, clearStoredPassword } from './utils/password';
 import { seenKey } from './utils/seen';
+import { playedKey } from './utils/played';
 import { api } from './utils/api';
 
 export default function App() {
@@ -19,7 +21,10 @@ export default function App() {
   const [tripsLoading, setTripsLoading] = useState(true);
   const [activities, setActivities] = useState([]);
   const [activitiesLoading, setActivitiesLoading] = useState(true);
+  const [games, setGames] = useState([]);
+  const [gamesLoading, setGamesLoading] = useState(true);
   const [seenStatus, setSeenStatus] = useState({});
+  const [playedStatus, setPlayedStatus] = useState({});
 
   const loadWatchlist = useCallback(async () => {
     setWatchlistLoading(true);
@@ -57,6 +62,18 @@ export default function App() {
     }
   }, []);
 
+  const loadGames = useCallback(async () => {
+    setGamesLoading(true);
+    try {
+      const data = await api.getGames();
+      setGames(data);
+    } catch (err) {
+      console.error('Failed to load games:', err.message);
+    } finally {
+      setGamesLoading(false);
+    }
+  }, []);
+
   const loadSeenStatus = useCallback(async () => {
     try {
       const data = await api.getSeenStatus();
@@ -70,14 +87,29 @@ export default function App() {
     }
   }, []);
 
+  const loadPlayedStatus = useCallback(async () => {
+    try {
+      const data = await api.getPlayedStatus();
+      const map = {};
+      for (const row of data) {
+        map[playedKey(row)] = { played_james: row.played_james, played_gurleen: row.played_gurleen };
+      }
+      setPlayedStatus(map);
+    } catch (err) {
+      console.error('Failed to load played status:', err.message);
+    }
+  }, []);
+
   useEffect(() => {
     if (hasPassword) {
       loadWatchlist();
       loadTrips();
       loadActivities();
+      loadGames();
       loadSeenStatus();
+      loadPlayedStatus();
     }
-  }, [hasPassword, loadWatchlist, loadTrips, loadActivities, loadSeenStatus]);
+  }, [hasPassword, loadWatchlist, loadTrips, loadActivities, loadGames, loadSeenStatus, loadPlayedStatus]);
 
   async function handleToggleSeen(item, person) {
     try {
@@ -89,6 +121,20 @@ export default function App() {
       return updated;
     } catch (err) {
       toast.error(`Failed to update seen status: ${err.message}`);
+      return null;
+    }
+  }
+
+  async function handleTogglePlayed(item, person) {
+    try {
+      const updated = await api.togglePlayed(item.igdb_id, person);
+      setPlayedStatus((prev) => ({
+        ...prev,
+        [playedKey(updated)]: { played_james: updated.played_james, played_gurleen: updated.played_gurleen },
+      }));
+      return updated;
+    } catch (err) {
+      toast.error(`Failed to update played status: ${err.message}`);
       return null;
     }
   }
@@ -124,6 +170,10 @@ export default function App() {
             onWatchlistChange={loadWatchlist}
             seenStatus={seenStatus}
             onToggleSeen={handleToggleSeen}
+            games={games}
+            onGamesChange={loadGames}
+            playedStatus={playedStatus}
+            onTogglePlayed={handleTogglePlayed}
           />
         ) : activeTab === 'watchlist' ? (
           <Watchlist
@@ -132,6 +182,14 @@ export default function App() {
             onChange={loadWatchlist}
             seenStatus={seenStatus}
             onToggleSeen={handleToggleSeen}
+          />
+        ) : activeTab === 'games' ? (
+          <Games
+            games={games}
+            loading={gamesLoading}
+            onChange={loadGames}
+            playedStatus={playedStatus}
+            onTogglePlayed={handleTogglePlayed}
           />
         ) : activeTab === 'travel' ? (
           <Travel trips={trips} loading={tripsLoading} onChange={loadTrips} />

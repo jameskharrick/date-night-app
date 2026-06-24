@@ -14,6 +14,11 @@ const tripLinksRouter = require('./routes/trip-links');
 const tripMediaRouter = require('./routes/trip-media');
 const activitiesRouter = require('./routes/activities');
 const activityMediaRouter = require('./routes/activity-media');
+const gamesRouter = require('./routes/games');
+const playedRouter = require('./routes/played');
+const gameGenresRouter = require('./routes/game-genres');
+const gameRecommendationsRouter = require('./routes/game-recommendations');
+const gameSearchRouter = require('./routes/game-search');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -51,6 +56,11 @@ app.use('/api/trip-links', tripLinksRouter);
 app.use('/api/trip-media', tripMediaRouter);
 app.use('/api/activities', activitiesRouter);
 app.use('/api/activity-media', activityMediaRouter);
+app.use('/api/games', gamesRouter);
+app.use('/api/played', playedRouter);
+app.use('/api/game-genres', gameGenresRouter);
+app.use('/api/game-recommendations', gameRecommendationsRouter);
+app.use('/api/game-search', gameSearchRouter);
 
 app.listen(PORT, () => {
   console.log(`Date Night server listening on port ${PORT}`);

@@ -1,6 +1,7 @@
-import { PLATFORMS, CONTENT_TYPES, CURRENT_YEAR } from '../utils/constants';
+import { PLATFORMS, GAMING_PLATFORMS, CONTENT_TYPES, CURRENT_YEAR } from '../utils/constants';
 
-export default function FilterPanel({ filters, onChange, onSubmit, genreOptions, loading }) {
+export default function FilterPanel({ filters, onChange, onSubmit, genreOptions, gameGenreOptions, loading }) {
+  const isGameMode = filters.type === 'game';
   const disabled = filters.surpriseMe;
 
   function update(patch) {
@@ -23,29 +24,33 @@ export default function FilterPanel({ filters, onChange, onSubmit, genreOptions,
     });
   }
 
-  const genreList = (() => {
-    if (filters.type === 'movie') return genreOptions.movie;
-    if (filters.type === 'tv') return genreOptions.tv;
+  function handleTypeChange(value) {
+    update({ type: value, genres: [], platforms: [] });
+  }
 
-    const seen = new Map();
-    [...genreOptions.movie, ...genreOptions.tv].forEach((g) => {
-      if (!seen.has(g.id)) seen.set(g.id, g);
-    });
-    return [...seen.values()];
+  const genreList = (() => {
+    if (isGameMode) return gameGenreOptions || [];
+    if (filters.type === 'tv') return genreOptions.tv || [];
+    return genreOptions.movie || [];
   })();
+
+  const platformList = isGameMode ? GAMING_PLATFORMS : PLATFORMS;
+  const platformSectionLabel = isGameMode ? 'Gaming Platform' : 'Streaming Platform';
+  const scoreSectionLabel = isGameMode ? 'Minimum Score' : 'Minimum TMDB Score';
+  const submitLabel = loading ? 'Searching...' : isGameMode ? 'Find games to play' : 'Find something to watch';
 
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-6">
       {/* Content type */}
       <div>
         <h3 className="text-sm font-semibold text-slate-300 mb-2">Content Type</h3>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {CONTENT_TYPES.map((ct) => (
             <button
               key={ct.value}
               type="button"
               disabled={disabled}
-              onClick={() => update({ type: ct.value })}
+              onClick={() => handleTypeChange(ct.value)}
               className={`flex-1 px-3 py-1.5 rounded-lg text-sm font-medium border transition ${
                 filters.type === ct.value
                   ? 'bg-amber-500 text-slate-950 border-amber-500'
@@ -82,9 +87,9 @@ export default function FilterPanel({ filters, onChange, onSubmit, genreOptions,
 
       {/* Platforms */}
       <div className={disabled ? 'opacity-40 pointer-events-none' : ''}>
-        <h3 className="text-sm font-semibold text-slate-300 mb-2">Streaming Platform</h3>
+        <h3 className="text-sm font-semibold text-slate-300 mb-2">{platformSectionLabel}</h3>
         <div className="flex flex-wrap gap-2">
-          {PLATFORMS.map((p) => {
+          {platformList.map((p) => {
             const active = filters.platforms.includes(p.name);
             return (
               <button
@@ -106,7 +111,7 @@ export default function FilterPanel({ filters, onChange, onSubmit, genreOptions,
       {/* Min score */}
       <div className={disabled ? 'opacity-40 pointer-events-none' : ''}>
         <h3 className="text-sm font-semibold text-slate-300 mb-2">
-          Minimum TMDB Score: <span className="text-amber-400">{filters.minScore.toFixed(1)}</span>
+          {scoreSectionLabel}: <span className="text-amber-400">{filters.minScore.toFixed(1)}</span>
         </h3>
         <input
           type="range"
@@ -146,27 +151,54 @@ export default function FilterPanel({ filters, onChange, onSubmit, genreOptions,
         </div>
       </div>
 
-      {/* Hide already seen */}
+      {/* Hide already seen / played */}
       <div className="space-y-1.5">
-        <h3 className="text-sm font-semibold text-slate-300 mb-2">Hide Already Seen</h3>
-        <label className="flex items-center justify-between bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 cursor-pointer">
-          <span className="text-sm text-slate-300">Seen by James</span>
-          <input
-            type="checkbox"
-            checked={filters.hideSeenJames}
-            onChange={(e) => update({ hideSeenJames: e.target.checked })}
-            className="rounded border-slate-600 bg-slate-900 text-amber-500 focus:ring-amber-400 focus:ring-offset-0"
-          />
-        </label>
-        <label className="flex items-center justify-between bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 cursor-pointer">
-          <span className="text-sm text-slate-300">Seen by Gurleen</span>
-          <input
-            type="checkbox"
-            checked={filters.hideSeenGurleen}
-            onChange={(e) => update({ hideSeenGurleen: e.target.checked })}
-            className="rounded border-slate-600 bg-slate-900 text-amber-500 focus:ring-amber-400 focus:ring-offset-0"
-          />
-        </label>
+        <h3 className="text-sm font-semibold text-slate-300 mb-2">
+          {isGameMode ? 'Hide Already Played' : 'Hide Already Seen'}
+        </h3>
+        {isGameMode ? (
+          <>
+            <label className="flex items-center justify-between bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 cursor-pointer">
+              <span className="text-sm text-slate-300">Played by James</span>
+              <input
+                type="checkbox"
+                checked={filters.hidePlayedJames}
+                onChange={(e) => update({ hidePlayedJames: e.target.checked })}
+                className="rounded border-slate-600 bg-slate-900 text-amber-500 focus:ring-amber-400 focus:ring-offset-0"
+              />
+            </label>
+            <label className="flex items-center justify-between bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 cursor-pointer">
+              <span className="text-sm text-slate-300">Played by Gurleen</span>
+              <input
+                type="checkbox"
+                checked={filters.hidePlayedGurleen}
+                onChange={(e) => update({ hidePlayedGurleen: e.target.checked })}
+                className="rounded border-slate-600 bg-slate-900 text-amber-500 focus:ring-amber-400 focus:ring-offset-0"
+              />
+            </label>
+          </>
+        ) : (
+          <>
+            <label className="flex items-center justify-between bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 cursor-pointer">
+              <span className="text-sm text-slate-300">Seen by James</span>
+              <input
+                type="checkbox"
+                checked={filters.hideSeenJames}
+                onChange={(e) => update({ hideSeenJames: e.target.checked })}
+                className="rounded border-slate-600 bg-slate-900 text-amber-500 focus:ring-amber-400 focus:ring-offset-0"
+              />
+            </label>
+            <label className="flex items-center justify-between bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 cursor-pointer">
+              <span className="text-sm text-slate-300">Seen by Gurleen</span>
+              <input
+                type="checkbox"
+                checked={filters.hideSeenGurleen}
+                onChange={(e) => update({ hideSeenGurleen: e.target.checked })}
+                className="rounded border-slate-600 bg-slate-900 text-amber-500 focus:ring-amber-400 focus:ring-offset-0"
+              />
+            </label>
+          </>
+        )}
       </div>
 
       {/* Surprise me */}
@@ -193,7 +225,7 @@ export default function FilterPanel({ filters, onChange, onSubmit, genreOptions,
         disabled={loading}
         className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-60 disabled:cursor-not-allowed text-slate-950 font-semibold rounded-lg px-4 py-2.5 transition"
       >
-        {loading ? 'Searching...' : 'Find something to watch'}
+        {submitLabel}
       </button>
     </div>
   );

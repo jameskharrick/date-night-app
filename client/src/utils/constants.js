@@ -9,7 +9,18 @@ export const PLATFORMS = [
   { name: 'Apple TV+', className: 'bg-slate-500 text-white' },
 ];
 
-export const PLATFORM_CLASS_MAP = PLATFORMS.reduce((acc, p) => {
+export const GAMING_PLATFORMS = [
+  { name: 'PS5', className: 'bg-blue-700 text-white' },
+  { name: 'PS4', className: 'bg-blue-500 text-white' },
+  { name: 'Xbox Series X/S', className: 'bg-green-700 text-white' },
+  { name: 'Xbox One', className: 'bg-green-600 text-white' },
+  { name: 'Switch', className: 'bg-red-500 text-white' },
+  { name: 'PC', className: 'bg-slate-500 text-white' },
+  { name: 'iOS', className: 'bg-slate-400 text-slate-950' },
+  { name: 'Android', className: 'bg-emerald-600 text-white' },
+];
+
+export const PLATFORM_CLASS_MAP = [...PLATFORMS, ...GAMING_PLATFORMS].reduce((acc, p) => {
   acc[p.name] = p.className;
   return acc;
 }, {});
@@ -29,8 +40,19 @@ export const STATUS_LABEL_MAP = STATUS_OPTIONS.reduce((acc, s) => {
 export const CONTENT_TYPES = [
   { value: 'movie', label: 'Movies' },
   { value: 'tv', label: 'TV Shows' },
-  { value: 'both', label: 'Both' },
+  { value: 'game', label: 'Games' },
 ];
+
+export const GAME_STATUS_OPTIONS = [
+  { value: 'want_to_play', label: 'Want to Play' },
+  { value: 'playing', label: 'Playing' },
+  { value: 'played', label: 'Played' },
+];
+
+export const GAME_STATUS_LABEL_MAP = GAME_STATUS_OPTIONS.reduce((acc, s) => {
+  acc[s.value] = s.label;
+  return acc;
+}, {});
 
 export const CURRENT_YEAR = new Date().getFullYear();
 export const DEFAULT_YEAR_FROM = 2000;

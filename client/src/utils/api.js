@@ -193,6 +193,55 @@ export const api = {
     request(`/api/activity-media/${mediaId}`, {
       method: 'DELETE',
     }),
+
+  getGames: () => request('/api/games'),
+
+  addToGames: (item) =>
+    request('/api/games', {
+      method: 'POST',
+      body: JSON.stringify(item),
+    }),
+
+  updateGame: (id, updates) =>
+    request(`/api/games/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    }),
+
+  removeFromGames: (id) =>
+    request(`/api/games/${id}`, {
+      method: 'DELETE',
+    }),
+
+  reorderGames: (orderedIds) =>
+    request('/api/games/reorder', {
+      method: 'PATCH',
+      body: JSON.stringify({ orderedIds }),
+    }),
+
+  getPlayedStatus: () => request('/api/played'),
+
+  togglePlayed: (igdb_id, person) =>
+    request('/api/played/toggle', {
+      method: 'POST',
+      body: JSON.stringify({ igdb_id, person }),
+    }),
+
+  getGameGenres: () => request('/api/game-genres'),
+
+  getGameRecommendations: (params) => {
+    const query = new URLSearchParams(
+      Object.entries(params).filter(([, value]) => value !== undefined && value !== '')
+    );
+    return request(`/api/game-recommendations?${query.toString()}`);
+  },
+
+  searchGames: (params) => {
+    const query = new URLSearchParams(
+      Object.entries(params).filter(([, value]) => value !== undefined && value !== '')
+    );
+    return request(`/api/game-search?${query.toString()}`);
+  },
 };
 
 export { API_URL };
